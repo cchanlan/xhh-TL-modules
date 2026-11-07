@@ -6,6 +6,22 @@ import zlib from 'node:zlib'
 import {fileURLToPath} from 'node:url'
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..')
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex')
+// 分片命名/大小属于下载协议，与核心 utils/moduleStore.js 一致，不随构建机变化。
+const PART_SIZE=512*1024
+function writeParts(file,pack){
+  if(pack.length<=PART_SIZE)return
+  const directory=file+'.parts'
+  fs.mkdirSync(directory,{recursive:true})
+  if(!fs.lstatSync(directory).isDirectory()||fs.lstatSync(directory).isSymbolicLink())throw new Error('分片目录必须是普通目录')
+  for(let offset=0,index=1;offset<pack.length;offset+=PART_SIZE,index++){
+    const target=path.join(directory,String(index).padStart(4,'0')+'.part')
+    const bytes=pack.subarray(offset,Math.min(offset+PART_SIZE,pack.length))
+    if(fs.existsSync(target)){
+      if(!fs.lstatSync(target).isFile())throw new Error('分片必须是普通文件')
+      if(!fs.readFileSync(target).equals(bytes))throw new Error('不可变分片内容发生变化：'+target)
+    }else fs.writeFileSync(target,bytes,{flag:'wx'})
+  }
+}
 const catalog={schema:1,coreApi:2,minCoreVersion:'2.1.0',minNodeVersion:'18.17.0',modules:[]}
 const owned=new Set()
 const metadata=new Map(fs.readdirSync(path.join(root,'modules')).sort().map(id=>[id,JSON.parse(fs.readFileSync(path.join(root,'modules',id,'module.json'),'utf8'))]))
@@ -40,8 +56,19 @@ for(const dir of order){
     fs.mkdirSync(path.dirname(out),{recursive:true})
     fs.writeFileSync(out,pack)
   }
+  writeParts(out,pack)
   const {sourceFiles,...published}=meta
   catalog.modules.push({...published,dependencyVersions,version,package:relative,sha256:hash(pack),bytes:pack.length,files:checks})
+}
+// 历史整包继续保留并补齐分片，旧缓存目录也能在 Gitee 安装/恢复。
+for(const id of fs.readdirSync(path.join(root,'packages'))){
+  const directory=path.join(root,'packages',id)
+  if(!fs.lstatSync(directory).isDirectory())continue
+  for(const name of fs.readdirSync(directory))if(name.endsWith('.xhmp')){
+    const file=path.join(directory,name)
+    if(!fs.lstatSync(file).isFile())throw new Error('模块包必须是普通文件')
+    writeParts(file,fs.readFileSync(file))
+  }
 }
 fs.writeFileSync(path.join(root,'catalog.json'),JSON.stringify(catalog,null,2)+'\n')
 console.log(`Built ${catalog.modules.length} packages; ${owned.size} owned files`)
