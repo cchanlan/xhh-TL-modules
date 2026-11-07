@@ -1,0 +1,25 @@
+{
+  "id": "auto_sign",
+  "label": "米游社自动签到",
+  "description": "原神、星铁、绝区零手动签到与每日自动签到。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/autoSign.js",
+      "export": "autoSign"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/autoSign.js",
+    "resources/auto_sign/auto_sign.html",
+    "utils/signClient.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

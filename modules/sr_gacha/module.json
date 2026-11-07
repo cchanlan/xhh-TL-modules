@@ -1,0 +1,30 @@
+{
+  "id": "sr_gacha",
+  "label": "星铁抽卡记录",
+  "description": "更新、导入与查看星铁抽卡记录及卡池统计。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/srGachaLog.js",
+      "export": "srGachaLog"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/srGachaLog.js",
+    "resources/gachaLog/allLog.html",
+    "resources/gachaLog/gachaLog.html",
+    "utils/gachaImport.js",
+    "utils/gachaStat.js",
+    "utils/srGachaRebuild.js",
+    "utils/srGachaSources.js",
+    "utils/xlsxReader.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

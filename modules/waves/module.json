@@ -1,0 +1,17 @@
+{
+  "id": "waves",
+  "label": "鸣潮体力",
+  "description": "为体力功能接入鸣潮，读取库街区账号与结晶波片。",
+  "coreApi": 2,
+  "dependencies": [
+    "tl",
+    "shared_sqlite"
+  ],
+  "entries": [],
+  "internal": false,
+  "sourceFiles": [
+    "utils/wavesData.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

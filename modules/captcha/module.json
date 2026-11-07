@@ -1,0 +1,22 @@
+{
+  "id": "captcha",
+  "label": "撞码自动处理",
+  "description": "处理米游社验证码提示，配合过码服务继续请求。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account"
+  ],
+  "entries": [
+    {
+      "path": "apps/captchaNotice.js",
+      "export": "captchaNotice"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/captchaNotice.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

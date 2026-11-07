@@ -1,0 +1,14 @@
+{
+  "id": "shared_sqlite",
+  "label": "SQLite 读取兼容层",
+  "description": "SQLite 读取兼容层",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "utils/sqlite.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

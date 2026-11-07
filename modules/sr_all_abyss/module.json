@@ -1,0 +1,26 @@
+{
+  "id": "sr_all_abyss",
+  "label": "星铁全部深渊",
+  "description": "汇总星铁混沌回忆、虚构叙事、末日幻影与异相仲裁。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account"
+  ],
+  "entries": [
+    {
+      "path": "apps/Abyss.js",
+      "export": "Abyss"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/Abyss.js",
+    "resources/all-abyss-mobile.html",
+    "resources/all-abyss.html",
+    "resources/background.png",
+    "apps/allAbyssModule.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

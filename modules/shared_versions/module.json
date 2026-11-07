@@ -1,0 +1,14 @@
+{
+  "id": "shared_versions",
+  "label": "版本资料接口",
+  "description": "版本资料接口",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "utils/alioth.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

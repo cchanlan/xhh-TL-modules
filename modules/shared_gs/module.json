@@ -1,0 +1,18 @@
+{
+  "id": "shared_gs",
+  "label": "原神成绩与统计接口",
+  "description": "原神成绩与统计接口",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account"
+  ],
+  "entries": [],
+  "internal": true,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "utils/gsHelper.js",
+    "utils/yshelperApi.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

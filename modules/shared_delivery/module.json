@@ -1,0 +1,16 @@
+{
+  "id": "shared_delivery",
+  "label": "体力订阅与投递",
+  "description": "体力订阅与投递",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_stamina"
+  ],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "utils/staminaPushService.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

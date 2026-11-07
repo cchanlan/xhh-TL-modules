@@ -1,0 +1,25 @@
+{
+  "id": "assets_bg_3",
+  "label": "背景图库资源分包",
+  "description": "背景图库资源分包",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "resources/bg/终北的遗响-506643.png",
+    "resources/bg/绚彩的湖泊-509074.png",
+    "resources/bg/花景芳馥-508396.png",
+    "resources/bg/西风骑士团·图书馆-504962.png",
+    "resources/bg/轻策山间-504951.png",
+    "resources/bg/载醉之舟-505118.png",
+    "resources/bg/遗世的仙庭-507811.png",
+    "resources/bg/铸铜的要塞-505121.png",
+    "resources/bg/雪葬王冕之地-509636.png",
+    "resources/bg/雷云旋聚之处-505030.png",
+    "resources/bg/飘浮在云间的卫星-505082.png",
+    "resources/bg/高眺之蛇首-505034.png"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

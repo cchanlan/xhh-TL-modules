@@ -1,0 +1,33 @@
+{
+  "id": "role_combat",
+  "label": "幻想真境剧诗 / 小剧诗",
+  "description": "查询幻想剧诗可用角色与个人小剧诗成绩。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_gs",
+    "shared_fonts",
+    "shared_versions"
+  ],
+  "entries": [
+    {
+      "path": "apps/role_combat.js",
+      "export": "role_combat"
+    },
+    {
+      "path": "apps/miniRoleCombat.js",
+      "export": "miniRoleCombat"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/role_combat.js",
+    "resources/role_combat/mini_role_combat.css",
+    "resources/role_combat/mini_role_combat.html",
+    "resources/role_combat/role_combat.css",
+    "resources/role_combat/role_combat.html",
+    "apps/miniRoleCombat.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

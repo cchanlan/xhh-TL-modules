@@ -1,0 +1,23 @@
+{
+  "id": "redeem",
+  "label": "三游戏兑换码",
+  "description": "三游戏国服兑换码手动使用及官方前瞻码自动订阅。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account"
+  ],
+  "entries": [
+    {
+      "path": "apps/redeemCodes.js",
+      "export": "redeemCodes"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/redeemCodes.js",
+    "utils/redeemClient.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

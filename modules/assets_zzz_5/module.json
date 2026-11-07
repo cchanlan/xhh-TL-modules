@@ -1,0 +1,15 @@
+{
+  "id": "assets_zzz_5",
+  "label": "绝区零角色立绘资源分包",
+  "description": "绝区零角色立绘资源分包",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "resources/zzzrole/IconRole65.png",
+    "resources/zzzrole/IconRole66.webp"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

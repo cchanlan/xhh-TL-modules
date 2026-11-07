@@ -1,0 +1,20 @@
+{
+  "id": "tmp_clean",
+  "label": "临时文件清理",
+  "description": "按计划清理小火花出图临时文件，也支持手动清理。",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [
+    {
+      "path": "apps/tmpCleaner.js",
+      "export": "TmpCleaner"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/tmpCleaner.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

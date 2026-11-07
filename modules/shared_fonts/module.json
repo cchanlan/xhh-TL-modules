@@ -1,0 +1,16 @@
+{
+  "id": "shared_fonts",
+  "label": "公共字体",
+  "description": "公共字体",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "resources/font/NotoSansCJKsc-Regular.ttf",
+    "resources/font/unifont.otf",
+    "resources/font/yuan.ttf"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

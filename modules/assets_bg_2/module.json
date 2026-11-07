@@ -1,0 +1,31 @@
+{
+  "id": "assets_bg_2",
+  "label": "背景图库资源分包",
+  "description": "背景图库资源分包",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "resources/bg/曙光初照的庄园-504964.png",
+    "resources/bg/曙光重新升起之处-509624.png",
+    "resources/bg/月亮的心-509075.png",
+    "resources/bg/未名的剑冢-504960.png",
+    "resources/bg/未完工的灰烬之城-505088.png",
+    "resources/bg/来源.json",
+    "resources/bg/极星的冰雪之宫-509634.png",
+    "resources/bg/格式塔-505116.png",
+    "resources/bg/永恒燃烧的炉心-509633.png",
+    "resources/bg/沐浴月光之树-504949.png",
+    "resources/bg/沙暴不息的达马山-504996.png",
+    "resources/bg/海渊民的村落-505028.png",
+    "resources/bg/瀚海孤云-504946.png",
+    "resources/bg/炽沙与骄阳的高阁-508428.png",
+    "resources/bg/玉京台-504955.png",
+    "resources/bg/硕果累累的母树-505097.png",
+    "resources/bg/神无冢·阵前-505037.png",
+    "resources/bg/稻妻城·城郊-505041.png"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

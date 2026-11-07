@@ -1,0 +1,21 @@
+{
+  "id": "solver",
+  "label": "过码服务部署",
+  "description": "一键部署和检查独立过码服务，不随模块卸载停止服务。",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [
+    {
+      "path": "apps/solverDeploy.js",
+      "export": "solverDeploy"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/solverDeploy.js",
+    "utils/pm2.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

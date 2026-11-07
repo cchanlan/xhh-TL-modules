@@ -1,0 +1,22 @@
+{
+  "id": "resin_push",
+  "label": "体力阈值推送",
+  "description": "设置体力阈值，恢复到指定数值时发送群提醒。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_delivery"
+  ],
+  "entries": [
+    {
+      "path": "apps/resinPush.js",
+      "export": "resinPush"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/resinPush.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

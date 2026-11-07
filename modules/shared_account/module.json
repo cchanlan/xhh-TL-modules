@@ -1,0 +1,22 @@
+{
+  "id": "shared_account",
+  "label": "米游社账号接口",
+  "description": "米游社账号接口",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "utils/auth.js",
+    "utils/captchaTip.js",
+    "utils/ckAutoRefresh.js",
+    "utils/deletedCk.js",
+    "utils/mysClient.js",
+    "utils/mysVerify.js",
+    "utils/runtimePatch.js",
+    "utils/signAccounts.js",
+    "utils/userBind.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

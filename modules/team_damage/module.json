@@ -1,0 +1,26 @@
+{
+  "id": "team_damage",
+  "label": "队伍伤害",
+  "description": "读取喵喵面板，计算队伍伤害并比较搭配。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_gs"
+  ],
+  "entries": [
+    {
+      "path": "apps/teamDamage.js",
+      "export": "teamDamage"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/teamDamage.js",
+    "resources/team_damage/team_damage.css",
+    "resources/team_damage/team_damage.html",
+    "resources/team_damage/team_damage_help.html",
+    "utils/teyvatDamage.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

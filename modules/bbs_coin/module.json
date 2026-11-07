@@ -1,0 +1,26 @@
+{
+  "id": "bbs_coin",
+  "label": "米游币社区任务",
+  "description": "完成米游币社区任务，查询余额并管理自动任务。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account",
+    "shared_sqlite",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/autoBbsCoin.js",
+      "export": "autoBbsCoin"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/autoBbsCoin.js",
+    "resources/bbs_coin/bbs_coin.html",
+    "utils/bbsCoinClient.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

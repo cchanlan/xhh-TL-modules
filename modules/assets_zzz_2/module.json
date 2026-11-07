@@ -1,0 +1,27 @@
+{
+  "id": "assets_zzz_2",
+  "label": "绝区零角色立绘资源分包",
+  "description": "绝区零角色立绘资源分包",
+  "coreApi": 2,
+  "dependencies": [],
+  "entries": [],
+  "internal": true,
+  "sourceFiles": [
+    "resources/zzzrole/IconRole18.png",
+    "resources/zzzrole/IconRole20.png",
+    "resources/zzzrole/IconRole21.png",
+    "resources/zzzrole/IconRole22.png",
+    "resources/zzzrole/IconRole23.png",
+    "resources/zzzrole/IconRole24.png",
+    "resources/zzzrole/IconRole25.png",
+    "resources/zzzrole/IconRole26.png",
+    "resources/zzzrole/IconRole27.png",
+    "resources/zzzrole/IconRole28.png",
+    "resources/zzzrole/IconRole29.png",
+    "resources/zzzrole/IconRole30.png",
+    "resources/zzzrole/IconRole31.png",
+    "resources/zzzrole/IconRole32.png"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "assets_bg",
+  "label": "背景图库",
+  "description": "为查询与帮助卡片提供背景图库，可单独移除。",
+  "coreApi": 2,
+  "dependencies": [
+    "assets_bg_1",
+    "assets_bg_2",
+    "assets_bg_3"
+  ],
+  "entries": [],
+  "internal": false,
+  "legacyResource": true,
+  "sourceFiles": [],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

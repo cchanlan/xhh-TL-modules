@@ -1,0 +1,16 @@
+{
+  "id": "assets_waves",
+  "label": "鸣潮内置角色立绘",
+  "description": "鸣潮内置角色立绘，不影响另外配置的自备图库。",
+  "coreApi": 2,
+  "dependencies": [
+    "assets_waves_1",
+    "assets_waves_2"
+  ],
+  "entries": [],
+  "internal": false,
+  "legacyResource": true,
+  "sourceFiles": [],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "abyss_team",
+  "label": "深渊配队",
+  "description": "查看深境螺旋配队与常用队伍，辅助挑选阵容。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_gs",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/abyssTeam.js",
+      "export": "abyssTeam"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/abyssTeam.js",
+    "resources/abyss_team/abyss_team.css",
+    "resources/abyss_team/abyss_team.html"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

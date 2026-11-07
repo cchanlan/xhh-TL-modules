@@ -1,0 +1,25 @@
+{
+  "id": "hard_team",
+  "label": "危战配队",
+  "description": "查看幽境危战配队，结合角色信息选择挑战阵容。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_gs",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/hardTeam.js",
+      "export": "hardTeam"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/hardTeam.js",
+    "resources/hard_team/hard_team.css",
+    "resources/hard_team/hard_team.html"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

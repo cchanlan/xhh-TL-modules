@@ -1,0 +1,26 @@
+{
+  "id": "nanoka",
+  "label": "版本配置（深渊/剧诗/危战）",
+  "description": "查看原神与星铁各期挑战配置、敌人及版本资料。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_versions",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/nanokaAbyss.js",
+      "export": "nanokaAbyss"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/nanokaAbyss.js",
+    "resources/leyline_luna/leyline_luna.html",
+    "resources/nanoka_abyss/nanoka_abyss.css",
+    "resources/nanoka_abyss/nanoka_abyss.html"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

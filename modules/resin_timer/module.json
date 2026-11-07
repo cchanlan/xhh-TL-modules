@@ -1,0 +1,23 @@
+{
+  "id": "resin_timer",
+  "label": "质变仪 / 洞天宝钱到期提醒",
+  "description": "参量质变仪冷却结束、洞天宝钱攒满时，提醒订阅用户。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_delivery"
+  ],
+  "entries": [
+    {
+      "path": "apps/resinReminder.js",
+      "export": "resinReminder"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/resinReminder.js",
+    "utils/resinTimer.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

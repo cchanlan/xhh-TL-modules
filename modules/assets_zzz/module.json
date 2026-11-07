@@ -1,0 +1,19 @@
+{
+  "id": "assets_zzz",
+  "label": "绝区零角色立绘",
+  "description": "绝区零角色立绘，供体力立绘卡和桌面小组件使用。",
+  "coreApi": 2,
+  "dependencies": [
+    "assets_zzz_1",
+    "assets_zzz_2",
+    "assets_zzz_3",
+    "assets_zzz_4",
+    "assets_zzz_5"
+  ],
+  "entries": [],
+  "internal": false,
+  "legacyResource": true,
+  "sourceFiles": [],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

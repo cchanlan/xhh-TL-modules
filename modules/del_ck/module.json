@@ -1,0 +1,22 @@
+{
+  "id": "del_ck",
+  "label": "删除 CK 对账",
+  "description": "删除账号时记录残留凭证，避免已删账号被重新识别。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_account"
+  ],
+  "entries": [
+    {
+      "path": "apps/delCkHook.js",
+      "export": "TLDelCkHook"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/delCkHook.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "tl",
+  "label": "体力查询",
+  "description": "原神、星铁、绝区零体力一页查看，支持多账号与多种卡片。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_stamina"
+  ],
+  "entries": [
+    {
+      "path": "apps/TL.js",
+      "export": "TL"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": false,
+  "sourceFiles": [
+    "apps/TL.js"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

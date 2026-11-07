@@ -1,0 +1,25 @@
+{
+  "id": "hold_rate",
+  "label": "角色持有率",
+  "description": "查看原神角色持有率和统计信息。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_gs",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/holdRate.js",
+      "export": "holdRate"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/holdRate.js",
+    "resources/hold_rate/hold_rate.css",
+    "resources/hold_rate/hold_rate.html"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

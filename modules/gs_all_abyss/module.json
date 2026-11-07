@@ -1,0 +1,26 @@
+{
+  "id": "gs_all_abyss",
+  "label": "原神全部深渊",
+  "description": "一张图汇总原神深境螺旋、幽境危战与幻想真境剧诗。",
+  "coreApi": 2,
+  "dependencies": [
+    "shared_gs",
+    "shared_fonts"
+  ],
+  "entries": [
+    {
+      "path": "apps/gsAllAbyss.js",
+      "export": "gsAllAbyss"
+    }
+  ],
+  "internal": false,
+  "requiresMiao": true,
+  "sourceFiles": [
+    "apps/gsAllAbyss.js",
+    "resources/gs_all_abyss/char-mcard.html",
+    "resources/gs_all_abyss/gs_all_abyss.css",
+    "resources/gs_all_abyss/gs_all_abyss.html"
+  ],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}
