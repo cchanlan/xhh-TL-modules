@@ -31,7 +31,7 @@ import { renderTpl } from '../utils/render.js'
 import { parseImportFile } from '../utils/gachaImport.js'
 import { fetchWorkshop } from '../utils/srGachaSources.js'
 import { rebuildGachaData } from '../utils/srGachaRebuild.js'
-import { analyse, buildLine, getIcon, poolMax } from '../utils/gachaStat.js'
+import { analyse, buildLine, getIcon, pickHeroArt, poolMax } from '../utils/gachaStat.js'
 import { guardModule } from '../utils/modules.js'
 
 const BADGE_LOGIN = 'https://api-takumi.mihoyo.com/common/badge/v1/login/account'
@@ -1429,6 +1429,7 @@ async function buildViewData(e, uid) {
     updatedAt: entry?.at
       ? moment(entry.at).format('MM-DD HH:mm')
       : (stat.lastTime || '').slice(5, 16) || moment().format('MM-DD HH:mm'),
+    heroArt: pickHeroArt(),
   }
 }
 
@@ -1476,6 +1477,13 @@ async function buildAllViewData(e, uid) {
   const total = pools.reduce((n, p) => n + p.allNum, 0)
   const totalFive = pools.reduce((n, p) => n + p.fiveNum, 0)
   const ys = total * 160
+  // 总览头图要显示全局统计周期：取各池最早首抽与最晚记录
+  let firstTime = ''
+  let lastTime = ''
+  for (const p of pools) {
+    if (p.firstTime && (!firstTime || p.firstTime < firstTime)) firstTime = p.firstTime
+    if (p.lastTime && p.lastTime > lastTime) lastTime = p.lastTime
+  }
   return {
     uid: String(uid),
     pools,
@@ -1483,7 +1491,10 @@ async function buildAllViewData(e, uid) {
     totalFive,
     totalYs: ys >= 10000 ? `${(ys / 10000).toFixed(2)}w` : String(ys),
     avg: totalFive ? Math.round(total / totalFive) : 0,
+    firstTime,
+    lastTime,
     updatedAt: moment(newestAt || Date.now()).format('MM-DD HH:mm'),
+    heroArt: pickHeroArt(),
   }
 }
 

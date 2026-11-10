@@ -1,3 +1,7 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 /**
  * 抽卡记录统计（口径对齐 genshin 的 gachaLog.analyse / randData）
  *
@@ -313,3 +317,19 @@ export function buildLine(data, type) {
 }
 
 export default { analyse, buildLine, getIcon, poolMax }
+
+/** 随机挑一张星铁角色立绘（miao 的 meta-sr splash）做头图背景；拿不到返回空串 */
+let heroPool
+export function pickHeroArt() {
+  if (!heroPool || !heroPool.length) {
+    try {
+      const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../miao-plugin/resources/meta-sr/character')
+      heroPool = fs.readdirSync(dir)
+        .filter(name => !name.startsWith('.') && fs.existsSync(path.join(dir, name, 'imgs', 'splash.webp')))
+        .map(name => `meta-sr/character/${name}/imgs/splash.webp`)
+    } catch {
+      heroPool = []
+    }
+  }
+  return heroPool.length ? heroPool[Math.floor(Math.random() * heroPool.length)] : ''
+}
