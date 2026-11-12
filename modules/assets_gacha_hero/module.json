@@ -1,0 +1,16 @@
+{
+  "id": "assets_gacha_hero",
+  "label": "抽卡记录背景图",
+  "description": "星铁抽卡记录头图用的 50 张角色立绘，可单独移除；不装则用默认的星穹列车图。",
+  "coreApi": 2,
+  "dependencies": [
+    "assets_gacha_hero_1",
+    "assets_gacha_hero_2"
+  ],
+  "entries": [],
+  "internal": false,
+  "legacyResource": true,
+  "sourceFiles": [],
+  "minCoreVersion": "2.1.0",
+  "minNodeVersion": "18.17.0"
+}

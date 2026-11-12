@@ -19,6 +19,7 @@
     "apps/srGachaLog.js",
     "resources/gachaLog/allLog.html",
     "resources/gachaLog/gachaLog.html",
+    "resources/gachaLog/hero-default.webp",
     "utils/gachaImport.js",
     "utils/gachaStat.js",
     "utils/srGachaRebuild.js",

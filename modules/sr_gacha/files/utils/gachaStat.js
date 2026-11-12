@@ -318,18 +318,22 @@ export function buildLine(data, type) {
 
 export default { analyse, buildLine, getIcon, poolMax }
 
-/** 随机挑一张星铁角色立绘（miao 的 meta-sr splash）做头图背景；拿不到返回空串 */
+/**
+ * 随机挑一张内置的星铁角色立绘做整张头图的背景。
+ * 图库在 resources/gachaLog/hero —— 由「抽卡记录背景图」模块提供（50 张精选横图）。
+ * 没装这个模块就用插件自带的官方星穹列车横幅。
+ */
 let heroPool
 export function pickHeroArt() {
-  if (!heroPool || !heroPool.length) {
+  if (!heroPool) {
+    heroPool = []
     try {
-      const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../miao-plugin/resources/meta-sr/character')
-      heroPool = fs.readdirSync(dir)
-        .filter(name => !name.startsWith('.') && fs.existsSync(path.join(dir, name, 'imgs', 'splash.webp')))
-        .map(name => `meta-sr/character/${name}/imgs/splash.webp`)
+      const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../resources/gachaLog/hero')
+      heroPool = fs.readdirSync(dir).filter(f => /\.(webp|png|jpe?g)$/i.test(f))
     } catch {
       heroPool = []
     }
   }
-  return heroPool.length ? heroPool[Math.floor(Math.random() * heroPool.length)] : ''
+  if (!heroPool.length) return 'gachaLog/hero-default.webp'
+  return `gachaLog/hero/${heroPool[Math.floor(Math.random() * heroPool.length)]}`
 }

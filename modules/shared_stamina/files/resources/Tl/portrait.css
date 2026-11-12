@@ -35,56 +35,60 @@ body {
   background: linear-gradient(135deg, #1b2426 0%, #101617 55%, #080c0d 100%);
 }
 
-/* 立绘用 img 承载：立绘多是带不透明背景的整张插画，
-   遮罩必须贴着图片自身左缘淡入，否则会在图片边界上留一条硬竖线。 */
+/* 立绘铺满整卡：底层用同一张图放大模糊铺满，窄图/透明图左侧也有色彩；
+   上层清晰立绘按图自身比例摆：横图 cover 铺满，竖图撑高靠右不裁人物。 */
 .pt-portrait {
   position: absolute;
   top: 0;
   right: 0;
-  width: 70%;
+  width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   pointer-events: none;
 }
-/* 竖图：放大到 125% 撑满右侧，只裁上下各 12% 的边角，人物不至于缩成一条 */
-.pt-portrait img {
-  display: block;
-  height: 125%;
-  width: auto;
-  /* 近似方图按 125% 会宽过卡片，按右缘裁掉左侧，别铺到文字底下 */
-  max-width: 100%;
-  object-fit: cover;
-  object-position: right center;
-  /* 淡出长度用固定 rem：按图片宽度算百分比的话，窄图会被糊掉半个身子 */
-  -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0.12) 24rem, rgba(0,0,0,0.34) 54rem, rgba(0,0,0,0.62) 84rem, rgba(0,0,0,0.86) 114rem, rgba(0,0,0,0.97) 134rem, rgba(0,0,0,1) 150rem);
-  mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0.12) 24rem, rgba(0,0,0,0.34) 54rem, rgba(0,0,0,0.62) 84rem, rgba(0,0,0,0.86) 114rem, rgba(0,0,0,0.97) 134rem, rgba(0,0,0,1) 150rem);
+.pt-portrait-blur {
+  position: absolute;
+  inset: -6%;
+  background-size: cover;
+  background-position: center 30%;
+  filter: blur(46rem) saturate(1.18);
+  opacity: .9;
 }
-/* 横图：沿用原来的右侧 cover 构图，不重新裁人物；
-   左右被裁过边，淡出带拉长一些，裁切线才看不出来 */
+/* 竖图：放大到 132% 撑高右侧；宽度按比例走，不铺到文字底下 */
+.pt-portrait img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  height: 132%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: right center;
+  -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,.16) 8%, rgba(0,0,0,.5) 18%, rgba(0,0,0,.82) 28%, #000 38%);
+  mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,.16) 8%, rgba(0,0,0,.5) 18%, rgba(0,0,0,.82) 28%, #000 38%);
+}
+/* 横图：直接 cover 铺满整卡，左缘淡入 */
 .pt-wide .pt-portrait img {
   width: 100%;
   height: 100%;
+  max-width: none;
   object-fit: cover;
-  object-position: center bottom;
-  -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0.12) 40rem, rgba(0,0,0,0.34) 90rem, rgba(0,0,0,0.62) 140rem, rgba(0,0,0,0.86) 190rem, rgba(0,0,0,0.97) 224rem, rgba(0,0,0,1) 250rem);
-  mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0.12) 40rem, rgba(0,0,0,0.34) 90rem, rgba(0,0,0,0.62) 140rem, rgba(0,0,0,0.86) 190rem, rgba(0,0,0,0.97) 224rem, rgba(0,0,0,1) 250rem);
+  object-position: center 26%;
+  -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,.1) 6%, rgba(0,0,0,.28) 14%, rgba(0,0,0,.52) 24%, rgba(0,0,0,.78) 34%, rgba(0,0,0,.94) 42%, #000 50%);
+  mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,.1) 6%, rgba(0,0,0,.28) 14%, rgba(0,0,0,.52) 24%, rgba(0,0,0,.78) 34%, rgba(0,0,0,.94) 42%, #000 50%);
 }
-/* 抠好底的窄立绘：左缘是角色自己的轮廓，只轻轻柔化；
-   套不透明图那条长淡出带会把角色或武器的边啃掉 */
+/* 抠好底的窄立绘：左缘是角色自己的轮廓，只轻轻柔化 */
 .pt-alpha .pt-portrait img {
-  -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,1) 12%);
-  mask-image: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,1) 12%);
+  -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 10%, #000 24%);
+  mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 10%, #000 24%);
 }
-
-/* 遮罩：左侧压暗保证文字可读，右侧留出立绘，底部加深给信息条 */
+/* 浅色立绘时白字会发灰，遮罩比原版再压暗一档 */
 .pt-shade {
-  position: absolute;
-  inset: 0;
   background:
-    linear-gradient(90deg, rgba(9,12,20,0.72) 0%, rgba(9,12,20,0.46) 28%, rgba(9,12,20,0.2) 46%, rgba(9,12,20,0.06) 64%, rgba(9,12,20,0) 78%),
-    linear-gradient(180deg, rgba(9,12,20,0.18) 0%, rgba(9,12,20,0) 38%, rgba(9,12,20,0.12) 70%, rgba(9,12,20,0.66) 100%);
+    linear-gradient(90deg, rgba(9,12,20,0.86) 0%, rgba(9,12,20,0.72) 26%, rgba(9,12,20,0.44) 46%, rgba(9,12,20,0.16) 64%, rgba(9,12,20,0) 80%),
+    linear-gradient(180deg, rgba(9,12,20,0.22) 0%, rgba(9,12,20,0) 38%, rgba(9,12,20,0.14) 70%, rgba(9,12,20,0.7) 100%);
 }
 
 /* 顶部状态 */

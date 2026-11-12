@@ -46,51 +46,56 @@
       pointer-events: none;
       z-index: 0;
     }
+    /* 立绘铺满整张卡：左侧压一层深色渐变托住白字，右侧图全亮；
+       底部一条浅色渐隐，跟下面的统计区自然接上。 */
     .hero-art {
       position: absolute;
-      right: -100rem;
-      bottom: -70rem;
-      height: 130%;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: right top;
       z-index: 1;
-      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 34%);
-      mask-image: linear-gradient(to right, transparent 0%, #000 34%);
     }
     .hero::after {
       content: '';
-      position: absolute; inset: 0;
+      position: absolute;
+      inset: 0;
       z-index: 2;
       pointer-events: none;
-      background: linear-gradient(90deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.94) 38%, rgba(255,255,255,.55) 50%, rgba(255,255,255,.06) 60%, transparent 100%);
+      background:
+        linear-gradient(90deg, rgba(8, 6, 18, .9) 0%, rgba(8, 6, 18, .84) 20%, rgba(8, 6, 18, .62) 38%, rgba(8, 6, 18, .26) 58%, rgba(8, 6, 18, .05) 76%, rgba(8, 6, 18, 0) 88%),
+        linear-gradient(0deg, rgba(244, 242, 250, .92) 0%, rgba(244, 242, 250, 0) 16%);
     }
-    .hero-inner { position: relative; z-index: 3; }
+    .hero-inner { position: relative; z-index: 3; text-shadow: 0 1rem 10rem rgba(0, 0, 0, .55); }
     .hero-brand {
       display: flex; align-items: center; gap: 9rem;
-      font-size: 18rem; letter-spacing: 2rem; color: #867da0;
+      font-size: 18rem; letter-spacing: 2rem; color: rgba(255, 255, 255, .88);
     }
     .hero-brand::before {
       content: '';
       width: 4rem; height: 17rem; border-radius: 2rem;
-      background: linear-gradient(180deg, #bda9ff, #7f68e8);
+      background: linear-gradient(180deg, #d9ccff, #b7a4ff);
     }
     .hero-brand .u {
       margin-left: 16rem;
-      font-size: 15rem; letter-spacing: 0; color: #b3abc4;
+      font-size: 15rem; letter-spacing: 0; color: rgba(255, 255, 255, .62);
     }
     .hero-title {
       margin-top: 18rem;
       font-size: 46rem; font-weight: 700; letter-spacing: 2rem;
-      color: #241f33;
-      text-shadow: 0 2rem 14rem rgba(120, 90, 255, .12);
+      color: #fff;
+      text-shadow: 0 2rem 16rem rgba(0, 0, 0, .5);
     }
     .hero-uid {
       margin-top: 17rem;
       display: flex; align-items: center; gap: 9rem;
-      font-size: 21rem; color: #4d4560;
+      font-size: 21rem; color: rgba(255, 255, 255, .82);
     }
-    .hero-uid svg { width: 18rem; height: 18rem; opacity: .35; }
+    .hero-uid svg { width: 18rem; height: 18rem; opacity: .55; }
     .hero-period {
       margin-top: 9rem;
-      font-size: 17rem; color: #918aa4;
+      font-size: 17rem; color: rgba(255, 255, 255, .72);
     }
 
     /* 统计条 */
@@ -186,7 +191,7 @@
 <body>
 <div class="page">
   <div class="hero">
-    {{if heroArt}}<img class="hero-art" src="{{_miao_path}}{{heroArt}}" />{{/if}}
+    {{if heroArt}}<img class="hero-art" src="{{ppath}}{{heroArt}}" />{{/if}}
     <div class="hero-inner">
       <div class="hero-brand">崩坏：星穹铁道<span class="u">更新于 {{updatedAt}}</span></div>
       <div class="hero-title">跃迁记录总览</div>
