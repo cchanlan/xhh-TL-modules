@@ -1,76 +1,38 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="{{ppath}}hold_rate/hold_rate.css" />
-  <style id="rem-root">html { font-size: {{scalePx}}px; }</style>
+<meta charset="utf-8">
+<link rel="stylesheet" href="{{ppath}}hold_rate/hold_rate.css?v=20261122-ownership-atlas">
+<style>html { font-size: {{scalePx}}px; }</style>
 </head>
 <body class="theme-{{theme}}">
-  <div class="container" id="container" style="{{if bgImage}}background: url('{{bgImage}}') center/cover no-repeat !important;{{/if}}">
-    <div class="xhh_box">
-      <div class="one_box">
-        <div class="tx">
-          <img class="qq_tx" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt="" />
-        </div>
-        <div class="zi">
-          <p class="name">{{qqname}}</p>
-          <div class="zi_">
-            <div class="title-line">
-              <span class="badge">角色持有率</span>
-              <span class="sub">深渊参与者 · 角色持有比例</span>
-            </div>
-            <div class="meta-line">
-              {{if version}}<span>版本 {{version}}</span><span class="dot">·</span>{{/if}}
-              <span>{{generatedAt}}</span>
-              {{if lastUpdate}}<span class="dot">·</span><span>更新 {{lastUpdate}}</span>{{/if}}
-            </div>
-            <div class="mod-tags">
-              <span class="mod-tag on">提瓦特小助手</span>
-              {{if hasCk}}
-              <span class="mod-tag on">已持有 {{ownedCount}}/{{total}}</span>
-              {{else}}
-              <span class="mod-tag off">通用榜(未绑定CK)</span>
-              {{/if}}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="notice">
-        <span class="notice-title">说明</span>
-        <ul>
-          <li>数据来自<strong>提瓦特小助手</strong>，为「参与本期深渊统计玩家」中的角色持有比例</li>
-          <li>按<strong>星级</strong>分组，组内按<strong>持有率</strong>从高到低排序</li>
-          {{if hasCk}}<li>高亮为你<strong>已持有</strong>的角色，半透明为<strong>暂未持有</strong></li>{{else}}<li>绑定 CK 后可标记你已持有 / 未持有的角色</li>{{/if}}
-        </ul>
-      </div>
-
-      {{each groups g}}
-      <div class="floor-block">
-        <div class="floor-head">
-          <span class="floor-badge star-{{g.star}}">{{g.star}}★ 角色</span>
-          <span class="floor-meta">共 {{g.count}} 名</span>
-        </div>
-        <div class="rate-grid">
-          {{each g.chars c}}
-          <div class="rcard star-{{c.star}} {{if hasCk}}{{if c.owned}}owned{{else}}no-own{{/if}}{{/if}}">
-            <div class="rcard-face">
-              {{if c.face}}<img src="{{c.face}}" alt="" />{{else}}<div class="char-ph">?</div>{{/if}}
-              {{if hasCk}}{{if c.owned}}<span class="rcard-owned">✓</span>{{/if}}{{/if}}
-            </div>
-            <div class="rcard-name">{{c.name}}</div>
-            <div class="rcard-bar">
-              <div class="rcard-bar-fill star-{{c.star}}" style="width: {{c.rateText}}%;"></div>
-            </div>
-            <div class="rcard-rate">{{c.rateText}}%</div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      {{/each}}
-
-      <div class="foot">小火花体力小组件 · 角色持有率 · 数据仅供参考</div>
-    </div>
-  </div>
+<div class="stage" id="container" {{if bgImage}}style="background-image: url('{{bgImage}}');"{{/if}}>
+<main class="atlas">
+<header class="masthead">
+<div class="brand-line"><span>小火花 <i>/</i> 原神角色名册</span><span>深渊参与者 · 角色持有比例</span></div>
+<div class="cover">
+<div class="cover-copy"><p class="eyebrow">CHARACTER OWNERSHIP / GENSHIN IMPACT</p><h1>角色持有率</h1><p class="subtitle">按星级查角色，按比例看持有</p><div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt=""><strong class="account-name">{{qqname}}</strong></div></div>
+<div class="collection">{{if hasCk}}<span class="collection-label">我的持有 · 榜单内角色</span><div class="collection-count"><b>{{ownedCount}}</b><span>/ {{total}}</span></div><span class="collection-status">已持有 {{ownedCount}}/{{total}}</span>{{else}}<span class="collection-label">榜单角色</span><div class="collection-count"><b>{{total}}</b><span>位</span></div><span class="collection-status">通用榜(未绑定CK)</span>{{/if}}</div>
+</div>
+<div class="metadata">{{if version}}<span class="version">版本 {{version}}</span>{{/if}}<span>获取 {{generatedAt}}</span>{{if lastUpdate}}<span>更新 {{lastUpdate}}</span>{{/if}}<span class="source">提瓦特小助手</span></div>
+</header>
+<section class="guide"><div class="guide-heading"><h2>统计说明</h2><span>持有率 ≠ 出场率</span></div><ul><li>数据来自<strong>提瓦特小助手</strong>，为「参与本期深渊统计玩家」中的角色持有比例</li><li>按<strong>星级</strong>分组，组内按<strong>持有率</strong>从高到低排序</li>{{if hasCk}}<li>高亮为你<strong>已持有</strong>的角色，半透明为<strong>暂未持有</strong></li>{{else}}<li>绑定 CK 后可标记你已持有 / 未持有的角色</li>{{/if}}</ul></section>
+{{each groups g}}
+<section class="catalog-group star-{{g.star}}" data-star="{{g.star}}">
+<header class="group-heading"><div class="group-title"><span class="star-label">{{g.star}}★</span><h2>角色</h2><span class="group-count">共 {{g.count}} 名</span></div>{{if hasCk}}<span class="group-owned">已持有 <b>{{g.chars.filter(function(c) { return c.owned; }).length}}</b> / {{g.count}}</span>{{/if}}</header>
+<div class="ownership-list">
+{{each g.chars c}}
+<div class="ownership-row {{if hasCk}}{{if c.owned}}owned{{else}}unowned{{/if}}{{/if}}" data-owned="{{hasCk ? (c.owned ? 'owned' : 'unowned') : 'unknown'}}" data-star="{{c.star}}">
+<div class="portrait">{{if c.face}}<img src="{{c.face}}" alt="">{{else}}<span class="portrait-placeholder">?</span>{{/if}}{{if hasCk}}{{if c.owned}}<span class="owned-mark">✓</span>{{/if}}{{/if}}</div>
+<div class="entry-copy"><div class="entry-heading"><strong class="role-name">{{c.name}}</strong><span class="hold-rate">{{c.rateText}}<small>%</small></span></div><div class="entry-detail"><div class="rate-track"><i class="rate-fill" style="width: {{c.rate < 0 ? 0 : c.rate > 100 ? 100 : c.rate}}%;"></i></div>{{if hasCk}}{{if !c.owned}}<span class="ownership-status">未持有</span>{{/if}}{{/if}}</div></div>
+</div>
+{{/each}}
+</div>
+</section>
+{{/each}}
+{{if !groups.length}}<p class="empty-state">暂无可用的角色持有率数据</p>{{/if}}
+<footer class="colophon"><span>小火花体力小组件 · 角色持有率 · 数据仅供参考</span><b>小火花</b></footer>
+</main>
+</div>
 </body>
 </html>
