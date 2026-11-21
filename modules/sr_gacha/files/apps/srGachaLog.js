@@ -778,32 +778,16 @@ function mergePool(userId, uid, type, remote, poolStat, { replace = false, persi
   return { added5, addedPh, skipped, patched, notes, changed, total: local.length, records: local }
 }
 
-/** 星铁 UID：绑定库 → redis → 已有记录目录。前两条要过一遍纠正表，绑的号可能压根不是星铁号 */
+/** 默认星铁 UID 只跟随当前绑定；历史目录不能恢复已删除的绑定。 */
 async function resolveSrUid(e) {
   try {
     const user = await createUser(e.user_id, e)
     const uid = user?.getUid?.('sr')
-    if (uid) return { uid: fixedUid(e.user_id, uid), user }
+    return { uid: uid ? fixedUid(e.user_id, uid) : '', user }
   } catch (err) {
-    logger?.debug?.(`[xhh-TL][抽卡记录] createUser 失败：${err.message}`)
+    logger?.debug?.('[xhh-TL][抽卡记录] 读取当前绑定失败：' + err.message)
+    return { uid: '', user: null }
   }
-  try {
-    const v = await redis?.get?.(`Yz:srJson:mys:qq-uid:${e.user_id}`)
-    if (v) return { uid: fixedUid(e.user_id, v), user: null }
-  } catch (_) {}
-  try {
-    const dir = path.join(SR_JSON_DIR, String(e.user_id))
-    const subs = fs.readdirSync(dir).filter(d => /^\d+$/.test(d))
-    if (subs.length === 1) return { uid: subs[0], user: null }
-    // 多个 uid 目录时取最近写过的那个：刚更新完的号就是用户正在看的号
-    if (subs.length > 1) {
-      const newest = subs
-        .map(d => ({ d, at: mtimeOf(path.join(dir, d)) }))
-        .sort((a, b) => b.at - a.at)[0]
-      if (newest?.at) return { uid: newest.d, user: null }
-    }
-  } catch (_) {}
-  return { uid: '', user: null }
 }
 
 /**

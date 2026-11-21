@@ -223,13 +223,9 @@ async function readFromSqlite(qq) {
     for (const g of GAMES) {
       const ds = games[g] || {}
       const data = ds.data || {}
-      // games[g].uid 是「当前主 UID」，但 #删除ck 只删通行证、不会清它，删号后它会
-      // 残留成孤儿。已解绑的号不该再进 UID 列表（否则列表、绑定提示里会「复活」它）。
-      // 判据与 genshin 的 getUidList 一致：列表 = mysUsers.uids + games.data，
-      // 故只有「归属集合内的号」或「用户显式注册的号」才收 games[g].uid；
-      // 完全没有归属信息（纯扫码 stoken 用户 / 宿主无 genshin）时保持旧行为全收。
+      // 绑定行已存在时，主 UID 必须来自存活 CK 或显式注册列表。
       const owned = ownedUidsOf(mysUsers, g)
-      const mainUsable = ds.uid && (!owned.size || owned.has(String(ds.uid)) || !!data[ds.uid])
+      const mainUsable = ds.uid && (owned.has(String(ds.uid)) || !!data[ds.uid])
       if (mainUsable) pushUid(g, ds.uid, { type: data[ds.uid]?.type || 'reg' })
       for (const uid of Object.keys(data)) {
         pushUid(g, uid, { type: data[uid]?.type || 'reg' })
@@ -337,7 +333,7 @@ function readFromStokenYaml(qq) {
  * 的闸门同一语义：yaml 只能给存活账号补凭证与 UID，不能凭空复活账号。
  *
  * Users 无行（纯扫码 stoken 用户 / 宿主没装 genshin）或读库失败时不做任何过滤；
- * 没有 stuid 的老条目无法归属，原样保留。
+ * 没有 stuid 的老条目只能补充绑定列表中已经存在的 UID。
  */
 function gateStokenYamlByAliveIds(yamlPart, sqlitePart) {
   if (!yamlPart) return yamlPart
@@ -349,7 +345,8 @@ function gateStokenYamlByAliveIds(yamlPart, sqlitePart) {
   for (const [game, list] of Object.entries(yamlPart.uidLists || {})) {
     uidLists[game] = (list || []).filter((item) => {
       const stuid = String(item?.stuid || item?.ltuid || '')
-      if (!stuid || alive.has(stuid)) return true
+      if (stuid && alive.has(stuid)) return true
+      if (!stuid && (sqlitePart.uidLists?.[game] || []).some(bound => String(bound.uid) === String(item?.uid))) return true
       dropped.push(String(item?.uid || ''))
       return false
     })
@@ -453,21 +450,8 @@ class BindUser {
     const first = list[0] ? String(list[0].uid || list[0]) : ''
     const main = this._games[g]?.uid ? String(this._games[g].uid) : ''
 
-    // games[g].uid 是「当前主 UID」，但 #删除ck 只删通行证、不会把它清掉，
-    // 删号后它会残留成孤儿（UID 列表里其实已经没有它了）。两个来源必须自洽：
-    // 只要还有通行证声明过归属（mysUsers[].uids[g] 非空），返回的 UID 就必须在
-    // 归属集合里 —— 否则视作残留，回退到列表里第一个真正被拥有的号。
-    // 完全没有归属信息时（纯扫码 stoken 用户 / 宿主无 genshin）保持旧行为。
-    const owned = ownedUidsOf(this.mysUsers, g)
-    if (owned.size) {
-      if (main && owned.has(main)) return main
-      for (const item of list) {
-        const u = String(item?.uid ?? item ?? '')
-        if (u && owned.has(u)) return u
-      }
-      return ''
-    }
-    if (main) return main
+    // 默认选择跟随有效绑定列表，注册 UID 无需具备 CK。
+    if (main && list.some(item => String(item?.uid ?? item) === main)) return main
     return first
   }
 
@@ -534,7 +518,7 @@ function wrapLegacyUser(user) {
       return !!(user.hasCk || Object.keys(user.mysUsers || {}).length)
     },
     getUid(game = 'gs') {
-      return user.getUid?.(game) || user.uid || ''
+      return user.getUid?.(game) || ''
     },
     getUidList(game = 'gs') {
       if (typeof user.getUidList === 'function') return user.getUidList(game) || []
@@ -607,19 +591,10 @@ function mergeRuntimeSupplements(runtimeUser, qq) {
 
   const getUid = (game = 'gs') => {
     const key = gameKey(game)
-    const owned = ownedUidsOf(mysUsers, key)
-    const main = runtimeUser.getUid?.(key) ? String(runtimeUser.getUid(key)) : ''
-    // 同 BindUser.getUid：宿主主 UID 可能残留成孤儿（#删除ck 不清 games[g].uid），
-    // 有归属信息时以归属集合为准，回退到列表里第一个真正被拥有的号。
-    if (owned.size) {
-      if (main && owned.has(main)) return main
-      for (const item of lists[key] || []) {
-        const u = String(item?.uid ?? item ?? '')
-        if (u && owned.has(u)) return u
-      }
-      return ''
-    }
-    return main || lists[key]?.[0]?.uid || ''
+    const main = String(runtimeUser.getUid?.(key) || '')
+    const list = lists[key] || []
+    if (main && list.some(item => String(item?.uid ?? item) === main)) return main
+    return list[0]?.uid || ''
   }
   const getUidList = (game = 'gs') => lists[gameKey(game)] || []
   const getMysUser = (game = 'gs') => {
@@ -673,7 +648,8 @@ export async function createUser(qqOrE, e = null) {
   const sqlitePart = await readFromSqlite(qq)
   const yamlPart = gateStokenYamlByAliveIds(readFromStokenYaml(qq), sqlitePart)
   const redisGames = {}
-  for (const g of GAMES) {
+  // 宿主已有绑定行时，空绑定也是权威结果，旧 Redis 不能补回已删除的 UID。
+  for (const g of sqlitePart?.hasRow ? [] : GAMES) {
     const uid = await readMainUidFromRedis(qq, g)
     if (uid) redisGames[g] = { uid, data: { [uid]: { uid, type: 'redis' } } }
   }
