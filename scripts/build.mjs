@@ -4,6 +4,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import zlib from 'node:zlib'
 import {fileURLToPath} from 'node:url'
+import {moduleFingerprint,nextModuleVersion} from './version.mjs'
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..')
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex')
 // 分片命名/大小属于下载协议，与核心 utils/moduleStore.js 一致，不随构建机变化。
@@ -22,9 +23,18 @@ function writeParts(file,pack){
     }else fs.writeFileSync(target,bytes,{flag:'wx'})
   }
 }
+const args=process.argv.slice(2)
+if(args.length>1||(args.length&&!/^--bump=[a-z][a-z0-9_]*(?:,[a-z][a-z0-9_]*)*$/.test(args[0])))throw new Error('用法：node scripts/build.mjs [--bump=模块id,模块id]')
+const bumps=new Set(args.length?args[0].slice('--bump='.length).split(','):[])
+const catalogPath=path.join(root,'catalog.json')
+const previous=fs.existsSync(catalogPath)?JSON.parse(fs.readFileSync(catalogPath,'utf8')):null
+if(previous&&(!Array.isArray(previous.modules)||previous.schema!==1))throw new Error('历史目录损坏，不能重置模块版本')
+if(!previous&&fs.existsSync(path.join(root,'packages'))&&fs.readdirSync(path.join(root,'packages')).length)throw new Error('已有版本包但缺少历史目录，请先恢复 catalog.json')
+const previousById=new Map((previous?.modules||[]).map(m=>[m.id,m]))
 const catalog={schema:1,coreApi:2,minCoreVersion:'2.1.0',minNodeVersion:'18.17.0',modules:[]}
 const owned=new Set()
 const metadata=new Map(fs.readdirSync(path.join(root,'modules')).sort().map(id=>[id,JSON.parse(fs.readFileSync(path.join(root,'modules',id,'module.json'),'utf8'))]))
+for(const id of bumps)if(!metadata.has(id))throw new Error('待升版模块不存在：'+id)
 const order=[],visiting=new Set(),done=new Set()
 function visit(id){if(done.has(id))return;if(visiting.has(id)||!metadata.has(id))throw new Error('依赖缺失或成环：'+id);visiting.add(id);for(const dep of metadata.get(id).dependencies)visit(dep);visiting.delete(id);done.add(id);order.push(id)}
 for(const id of metadata.keys())visit(id)
@@ -43,7 +53,7 @@ for(const dir of order){
     files.push({path:name,content:bytes.toString('base64')})
   }
   const dependencyVersions=Object.fromEntries(meta.dependencies.map(id=>[id,catalog.modules.find(m=>m.id===id).version]))
-  const version='2.1.0-'+hash(JSON.stringify({checks,dependencyVersions,entries:meta.entries,coreApi:meta.coreApi,minCoreVersion:meta.minCoreVersion,minNodeVersion:meta.minNodeVersion,requiresMiao:meta.requiresMiao})).slice(0,12)
+  const version=nextModuleVersion(previousById.get(meta.id),moduleFingerprint(meta,checks,dependencyVersions),bumps.has(meta.id))
   const raw=Buffer.from(JSON.stringify({schema:1,id:meta.id,version,files}))
   if(raw.length>96*1024*1024) throw new Error('模块包展开超限，请拆分资源包：'+meta.id)
   const relative=`packages/${meta.id}/${version}.xhmp`,out=path.join(root,relative)
