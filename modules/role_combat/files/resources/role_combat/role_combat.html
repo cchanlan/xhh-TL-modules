@@ -1,67 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<link rel="stylesheet" href="{{ppath}}role_combat/role_combat.css?v=20261002-mask40" />
-  <style id="rem-root">html { font-size: {{scalePx}}px; }</style>
+<link rel="stylesheet" href="{{ppath}}role_combat/role_combat.css?v=20261122-panels-45-49" />
+<style>html { font-size: {{scalePx}}px; }</style>
 </head>
 <body class="theme-{{theme}}">
-<div class="page" id="container" {{if bgImage}}style="background: url('{{bgImage}}') center/cover no-repeat !important;"{{/if}}>
-<div class="bg-orb one"></div><div class="bg-orb two"></div>
-<main class="card">
-<header class="hero">
-<div>
-<div class="eyebrow">GENSHIN IMPACT · IMAGINARIUM THEATER</div>
+{{set elementNames = { pyro: '火', hydro: '水', dendro: '草', electro: '雷', cryo: '冰', anemo: '风', geo: '岩' } }}
+<div class="stage" id="container" {{if bgImage}}style="background-image: url('{{bgImage}}');"{{/if}}>
+<main class="folio">
+<header class="masthead">
+<div class="masthead-top"><span class="imprint">小火花 <i>/</i> 原神战前手册</span><span class="edition">幻想角色</span></div>
+<div class="cover">
+<div class="cover-copy">
+<p class="kicker">IMAGINARIUM THEATER</p>
 <h1>幻想真境剧诗</h1>
-<p>{{month}} {{if filterApplied}}{{queryUser}} (UID:{{queryUid}}) 拥有的可用角色{{else}}当期全部可用角色{{/if}}</p>
+<p class="cover-subtitle">这一期，谁能登台？</p>
+<p class="identity">{{if filterApplied}}<strong>{{queryUser}}</strong><span>UID {{queryUid}}</span>{{else}}当期全部可用角色{{/if}}</p>
 </div>
+<div class="issue"><span class="issue-year">{{month.slice(0, 4)}} / 剧诗期次</span><b>{{month.slice(5)}}</b><span class="issue-month">{{month}}</span></div>
+</div>
+<div class="brief">
+<div class="requirements"><span class="brief-label">限制元素</span><div class="element-tokens">{{each elements el}}<i class="token {{el}}">{{elementNames[el] || el}}</i>{{/each}}</div></div>
+<div class="brief-count"><b>{{opening.length}}</b><span>开幕角色</span></div>
+<div class="brief-count"><b>{{invite.length}}</b><span>特邀角色</span></div>
+<div class="brief-count"><b>{{available.length}}</b><span>可用角色</span></div>
+</div>
+{{if fallback}}<p class="notice warning">{{requestedMonth}} 暂无数据，请换个月份查询。</p>{{/if}}
 </header>
-{{if fallback}}
-<div class="warn">{{requestedMonth}} 暂无数据，请换个月份查询。</div>
-{{/if}}
-<section class="summary">
-<div class="summary-item"><span>限制元素</span><b>{{each elements el}}<i class="elem {{el}}">{{el === 'pyro' ? '火' : el === 'hydro' ? '水' : el === 'dendro' ? '草' : el === 'electro' ? '雷' : el === 'cryo' ? '冰' : el === 'anemo' ? '风' : '岩'}}</i>{{/each}}</b></div>
-<div class="summary-item"><span>开幕角色</span><b>{{opening.length}}</b></div>
-<div class="summary-item"><span>特邀角色</span><b>{{invite.length}}</b></div>
-<div class="summary-item"><span>可用角色</span><b>{{available.length}}</b></div>
-</section>
 
-<section class="block">
-<div class="title"><span>OPENING</span><h2>开幕角色</h2></div>
-<div class="char-grid featured">
-{{each opening c}}<div class="char"><img src="{{c.face}}"><div class="name">{{c.name}}</div><div class="meta {{c.elemClass}}">{{c.elemName}} · {{c.star}}★</div></div>{{/each}}
+<section class="chapter cast-chapter">
+<div class="chapter-heading"><h2>登台阵容</h2><span class="chapter-caption">开幕与特邀，一眼查齐</span></div>
+<div class="cast-columns">
+<section class="cast-pane opening-pane">
+<h3>开幕角色 <span>{{opening.length}} 位</span></h3>
+<div class="cast-list">
+{{each opening c}}<div class="cast-member" data-kind="opening" data-element="{{c.elemClass}}"><img src="{{c.face}}" alt=""><div class="cast-copy"><strong>{{c.name}}</strong><div class="cast-meta"><span class="element-word {{c.elemClass}}">{{c.elemName}}</span><span>{{c.star}}★</span></div></div></div>{{/each}}
 </div>
 </section>
-
-<section class="block">
-<div class="title"><span>INVITE</span><h2>特邀角色</h2></div>
-<div class="char-grid featured">
-{{each invite c}}<div class="char invite"><img src="{{c.face}}"><div class="name">{{c.name}}</div><div class="meta {{c.elemClass}}">{{c.elemName}} · {{c.star}}★</div></div>{{/each}}
+<section class="cast-pane invitation-pane">
+<h3>特邀角色 <span>{{invite.length}} 位</span></h3>
+<div class="cast-list">
+{{each invite c}}<div class="cast-member" data-kind="invite" data-element="{{c.elemClass}}"><img src="{{c.face}}" alt=""><div class="cast-copy"><strong>{{c.name}}</strong><div class="cast-meta"><span class="element-word {{c.elemClass}}">{{c.elemName}}</span><span>{{c.star}}★</span></div></div></div>{{/each}}
+</div>
+</section>
 </div>
 </section>
 
 {{if monsters && monsters.length}}
-<section class="block monster-block">
-<div class="title"><span>ENEMY</span><h2>关键关卡怪物</h2></div>
-<div class="monster-grid">
-{{each monsters m}}<div class="monster"><b>{{m.stage}}</b><span>{{m.names.join(' / ')}}</span></div>{{/each}}
+<section class="chapter encounter-chapter">
+<div class="chapter-heading"><h2>关卡索引</h2><span class="chapter-caption">关键关卡怪物</span></div>
+<div class="encounter-index">
+{{each monsters m}}<div class="encounter"><b class="encounter-stage">{{m.stage}}</b><p>{{m.names.join(' / ')}}</p></div>{{/each}}
 </div>
 </section>
 {{/if}}
 
-<section class="block">
-<div class="title"><span>AVAILABLE</span><h2>{{if filterApplied}}拥有的可用角色 ({{available.length}}个){{else}}限制元素 + 特邀可用角色{{/if}}</h2></div>
-<div class="mini-grid">
-{{each available c}}<div class="mini"><img src="{{c.face}}"><span>{{c.name}}</span><em class="{{c.elemClass}}">{{c.elemName}}</em></div>{{/each}}
+<section class="chapter roster-chapter">
+<div class="chapter-heading"><h2>{{if filterApplied}}拥有的可用角色{{else}}当期可用名册{{/if}}</h2><span class="roster-total">{{available.length}} <small>位</small></span></div>
+<p class="roster-description">{{if filterApplied}}按元素归类，展示当前账号的可用角色{{else}}包含限制元素及特邀角色{{/if}}</p>
+{{if ckMissing}}<p class="notice">未读取到{{if queryUser}} {{queryUser}} {{/if}}的角色数据，当前展示当期全部可用角色。发送 <b>#扫码登录</b> 绑定后只看自己拥有的角色。</p>{{/if}}
+{{set rosterOrder = elements.concat(['pyro', 'hydro', 'dendro', 'electro', 'cryo', 'anemo', 'geo']).filter(function(el, i, all) { return all.indexOf(el) === i; }).concat(['other'])}}
+{{each rosterOrder el}}
+{{set members = available.filter(function(c) { return el === 'other' ? !elementNames[c.elemClass] : c.elemClass === el; })}}
+{{if members.length}}
+<section class="element-section" data-element="{{el}}">
+<div class="element-heading"><b class="element-word {{el}}">{{elementNames[el] || '其他'}}</b><span>{{members.length}} 位</span></div>
+<div class="roster-list">
+{{each members c}}<div class="roster-member" data-element="{{c.elemClass}}"><img src="{{c.face}}" alt=""><span>{{c.name}}</span>{{if el === 'other'}}<small>{{c.elemName}}</small>{{/if}}</div>{{/each}}
 </div>
-{{if filterApplied && !available.length}}
-<p class="empty-tip">暂无符合条件的角色</p>
-{{/if}}
-{{if ckMissing}}
-<p class="account-tip">未读取到{{if queryUser}} {{queryUser}} {{/if}}的角色数据，以下为当期全部可用角色。发送 <b>#扫码登录</b> 绑定后只看自己拥有的角色</p>
-{{/if}}
 </section>
-<footer>数据来源：Alioth.wiki · v{{version}} · 获取时间 {{generatedAt}} · from 小火花</footer>
+{{/if}}
+{{/each}}
+{{if !available.length}}<p class="empty-state">暂无符合条件的角色</p>{{/if}}
+</section>
+
+<footer class="colophon"><div><span>数据来源 Alioth.wiki</span><span>v{{version}}</span><span>获取时间 {{generatedAt}}</span></div><b>小火花</b></footer>
 </main>
 </div>
 </body>
