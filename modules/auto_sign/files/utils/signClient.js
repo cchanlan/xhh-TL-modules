@@ -153,11 +153,12 @@ export async function signOne(uid, cookie, game = 'gs', opts = {}) {
   }
 
   // 发一次签到 POST，归一成 { rc, res }
+  let challenge = ''
   const doSign = async () => {
     const body = JSON.stringify({ act_id: actId, region: server, uid: String(uid), lang: 'zh-cn' })
     const res = await fetch(signUrl, {
       method: 'POST',
-      headers: buildSignHeaders(cookie, device, deviceFp, game),
+      headers: { ...buildSignHeaders(cookie, device, deviceFp, game), ...(challenge ? { 'x-rpc-challenge': challenge } : {}) },
       body,
       signal: AbortSignal.timeout(12000),
     }).then((r) => r.json())
@@ -165,7 +166,7 @@ export async function signOne(uid, cookie, game = 'gs', opts = {}) {
     return { rc: Number(res?.retcode), res }
   }
 
-  // 2) 执行签到（撞码且具备过码条件时，过码后重试一次）
+  // 2) 执行签到：过码后携带验证凭据限次重试。
   try {
     let { rc, res: signRes } = await doSign()
 
@@ -174,10 +175,16 @@ export async function signOne(uid, cookie, game = 'gs', opts = {}) {
     let verified = false
     if (isCaptcha(signRes) && auto) {
       log.mark(`[xhh-TL][sign] uid=${uid} 撞验证码，尝试过码…`)
-      const ok = await solveByLocalService({ cookie, autoVerifyAddr: auto, device, deviceFp, game })
+      const challengeOut = {}
+      const ok = await solveByLocalService({ cookie, autoVerifyAddr: auto, device, deviceFp, game, clientType: '5', challengeOut })
       if (ok) {
         verified = true
-        ({ rc, res: signRes } = await doSign())
+        challenge = challengeOut.challenge || ''
+        for (const gap of [0, 6000, 15000]) {
+          if (gap) await new Promise(resolve => setTimeout(resolve, gap))
+          ;({ rc, res: signRes } = await doSign())
+          if (!isCaptcha(signRes)) break
+        }
       }
     }
 
@@ -186,10 +193,10 @@ export async function signOne(uid, cookie, game = 'gs', opts = {}) {
       return { code: 'already', msg: `${label} 已经签到过了，请勿重复签到`, game, uid }
     }
     if (isCaptcha(signRes)) {
-      // 已经过码过了：米游社放行有延迟，重发一次本条就能签上。
+      // 验证成功不等于签到成功，按最终业务响应提示。
       return {
         code: 'captcha',
-        msg: verified ? '已过码，重发本条即可' : captchaTip(),
+        msg: verified ? '已尝试自动验证并重试，米游社仍要求验证码，请稍后再试' : captchaTip(),
         game,
         uid,
       }

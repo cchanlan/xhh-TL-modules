@@ -1,73 +1,45 @@
+import { createHash } from 'node:crypto'
 import { taskIsCurrent } from '../utils/taskLifecycle.js'
-/**
- * 米游社撞验证码 → 自动过码并重试
- *
- * 为什么走 Handler 而不是改各插件源码：
- *   genshin / miao-plugin 都是第三方插件，直接改会被 #更新 覆盖。
- *   但这两家撞码时都会汇到 genshin 的 MysInfo.checkCode，那里会调
- *   runtime.handler.call("mys.req.err")。在本插件注册同一个 key，
- *   即可一次覆盖两家所有会撞码的指令，且更新不掉。
- *
- * 行为分两种：
- *   - 配了 auto_verify_addr（全自动过码服务，本机或远程）：**直接过码 + 重试原请求**，用户无感
- *   - 没配 / 过码失败：只提示「稍后再试」，不发任何手动过码指令
- *
- * 为什么要「吃掉」紧随其后的旧提示：
- *   checkCode 在 handler 全部 reject 之后，会自己补一句
- *   「UID:xxx，米游社查询遇到验证码，请稍后再试」。自动过码成功时那句是多余的
- *   （查询已经成功了），失败时它也没告诉用户下一步发什么 —— 两种情况都该换成
- *   本插件的话术。这里在返回前短暂接管 e.reply，把那条吞掉。
- */
-
 import plugin from '../../../lib/plugins/plugin.js'
 import { config } from '../utils/pluginConfig.js'
 import { quoteEnabled } from '../utils/replyHelper.js'
 import { captchaTip } from '../utils/captchaTip.js'
 import { isModuleEnabled } from '../utils/modules.js'
 
-const log = {
-  mark: (...a) => (typeof logger !== 'undefined' ? logger.mark(...a) : console.log(...a)),
-  error: (...a) => (typeof logger !== 'undefined' ? logger.error(...a) : console.error(...a)),
-}
-
-/** 米游社风控码：撞到这些基本就是要过码 */
+// 从 mys.req.err 恢复当前请求，让原指令继续执行；不向消息总线重复投递指令。
 const CAPTCHA_RC = [1034, 5003, 10035, 10041]
-
-/**
- * 过码成功后原请求的自动重试梯度（毫秒，相对上一次尝试）：
- * 第一个 0 = 立刻重打一次，之后逐步拉长等米游社放行。
- * 总窗口 21 秒 —— 再长用户就要对着群干等，不如回退成一句「重发本条即可」。
- */
 const RETRY_GAPS = [0, 6000, 15000]
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-
-/** 旧提示的正文特征。范围收得很窄，只吞这一条，避免误伤正常回复 */
-const LEGACY_NOTICE_RE = /米游社查询遇到验证码/
-
-/** 同一个号 60 秒内只处理一次（一次查询可能连撞几码，重复过码没意义还费时） */
-const BUSY_TTL = 60_000
-const recent = new Map()
-
-function isBusy(key) {
-  const now = Date.now()
-  const last = recent.get(key)
-  if (last && now - last < BUSY_TTL) return true
-  recent.set(key, now)
-  if (recent.size > 500) {
-    for (const [k, t] of recent) {
-      if (now - t > BUSY_TTL) recent.delete(k)
-    }
-  }
-  return false
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+const verifying = new Map()
+const notices = new WeakMap()
+const suppressions = new WeakMap()
+const log = {
+  mark: (...args) => globalThis.logger?.mark?.(...args),
+  error: (...args) => globalThis.logger?.error?.(...args),
 }
 
-function isLegacyNotice(msg) {
-  if (typeof msg === 'string') return LEGACY_NOTICE_RE.test(msg)
-  if (Array.isArray(msg)) {
-    return msg.some((m) => typeof m === 'string' && LEGACY_NOTICE_RE.test(m))
+function header(headers, name) {
+  const key = Object.keys(headers || {}).find(key => key.toLowerCase() === name)
+  return key ? headers[key] : ''
+}
+
+// 只合并正在验证的同一凭据/设备/游戏；不共享查询结果，不留下阻止用户重试的冷却锁。
+async function verify(key, options) {
+  let pending = verifying.get(key)
+  if (!pending) {
+    pending = (async () => {
+      const { solveByLocalService } = await import('../utils/mysVerify.js')
+      const challengeOut = {}
+      const ok = await solveByLocalService({ ...options, challengeOut })
+      return { ok, challenge: challengeOut.challenge || '' }
+    })()
+    verifying.set(key, pending)
   }
-  return false
+  try {
+    return await pending
+  } finally {
+    if (verifying.get(key) === pending) verifying.delete(key)
+  }
 }
 
 export class captchaNotice extends plugin {
@@ -80,119 +52,101 @@ export class captchaNotice extends plugin {
     })
   }
 
-  /**
-   * @param e 实时事件
-   * @param args { mysApi, type, res, data, mysInfo }
-   * @param reject 调用即表示「本 handler 不处理，交给下一个」
-   */
   async onMysReqErr(e, args, reject) {
-    // 撞码自动处理被关掉时直接 reject：不自动过码、不自动重试，
-    // 也不去吃掉 genshin / miao-plugin 原本的验证码提示，一切照旧
-    if (!isModuleEnabled('captcha')) return reject()
-
-    const rc = Number(args?.res?.retcode)
-    // 非风控码：不是过码能解决的事，原样放行
-    if (!CAPTCHA_RC.includes(rc)) return reject()
-
-    const uid = String(args?.mysInfo?.uid || args?.data?.uid || '')
-    const game = args?.mysApi?.game || args?.mysInfo?.e?.game || 'gs'
-    const cookie = args?.mysApi?.cookie || args?.mysInfo?.ckInfo?.ck || ''
-    // 过码要跟撞码那次请求用同一枚设备，米游社才认（genshin 的 MysApi 上就是这枚）
-    const device = args?.mysApi?.device || ''
-    // 客户端形态也要跟着走：国内服是网页端（5），海外服是 App 端（2）
-    const server = String(args?.mysApi?.server || '')
-    const clientType = server ? (/cn_|_cn/.test(server) ? '5' : '2') : ''
-    const autoAddr = config().auto_verify_addr || ''
-
-    // 没配过码服务，或拿不到 ck / 没有可回复的事件 → 只提醒
-    if (!autoAddr || !cookie || !e?.reply) {
-      return this.noticeOnly(e, uid)
+    if (!isModuleEnabled('captcha') || !CAPTCHA_RC.includes(Number(args?.res?.retcode))) return reject()
+    const api = args?.mysApi
+    const uid = String(args?.mysInfo?.uid || api?.uid || args?.data?.uid || '')
+    const headers = args?.data?.headers || {}
+    const game = api?.game || args?.mysInfo?.e?.game || (e?.isSr ? 'sr' : 'gs')
+    const cookie = header(headers, 'cookie') || api?.cookie || args?.mysInfo?.ckInfo?.ck || ''
+    const requestDevice = header(headers, 'x-rpc-device_id') || api?.device || ''
+    const device = typeof requestDevice === 'object' ? requestDevice?.id || '' : requestDevice
+    const deviceFp = header(headers, 'x-rpc-device_fp') || api?._device_fp?.data?.device_fp || (typeof requestDevice === 'object' ? requestDevice?.fp : '') || ''
+    const server = String(api?.server || '')
+    const clientType = header(headers, 'x-rpc-client_type') || (server ? (/cn_|_cn/.test(server) ? '5' : '2') : '')
+    const autoVerifyAddr = config().auto_verify_addr || ''
+    const key = createHash('sha256').update(JSON.stringify([cookie, uid, game, device, deviceFp, clientType, autoVerifyAddr])).digest('hex')
+    if (!autoVerifyAddr || !cookie || typeof api?.getData !== 'function') {
+      await this.notice(e, uid, key, captchaTip())
+      return args.res
     }
-
-    // 同号 60 秒内不重复过码（一次查询会连撞几码）
-    const key = `${e.user_id}:${uid}:${game}`
-    if (isBusy(key)) return reject()
-
-    // ★ 全自动：过码成功后重试原请求
     try {
       log.mark(`[xhh-TL][撞码] uid=${uid} 自动过码中…`)
-      const { solveByLocalService } = await import('../utils/mysVerify.js')
-      const ok = await solveByLocalService({ cookie, autoVerifyAddr: autoAddr, device, clientType, game })
-      if (!ok) return this.noticeOnly(e, uid)
-
-      log.mark(`[xhh-TL][撞码] uid=${uid} 过码成功，自动重试原请求`)
-      // 过码是生效的，但米游社那边放行有延迟：实测过码完 0.3 秒就重打仍是 1034，
-      // 过一会儿再打就是 0。所以这里按梯度自己等、自己重打，
-      // 把「重发一次」这件事留在后台，不推给用户。
-      // 用原参数重打即可：风控码不缓存，getData 每次都会真打接口。
-      let retry = null
+      const { ok, challenge } = await verify(key, { cookie, autoVerifyAddr, device, deviceFp, clientType, game })
+      if (!taskIsCurrent()) return args.res
+      if (!ok) {
+        await this.notice(e, uid, key, captchaTip())
+        return args.res
+      }
+      // 仅复制本次参数，不能把另一查询的 challenge 写入共享 MysApi 或原始 data。
+      const data = { ...(args.data || {}), headers: { ...headers } }
+      if (challenge) {
+        for (const name of Object.keys(data.headers)) {
+          if (name.toLowerCase() === 'x-rpc-challenge') delete data.headers[name]
+        }
+        data.headers['x-rpc-challenge'] = challenge
+      }
+      let retry = args.res
       for (let i = 0; i < RETRY_GAPS.length; i++) {
         if (RETRY_GAPS[i]) await sleep(RETRY_GAPS[i])
-        if(!taskIsCurrent())return reject()
-        retry = await args.mysApi.getData(args.type, args.data || {})
+        if (!taskIsCurrent()) return args.res
+        retry = await api.getData(args.type, data)
         if (retry && Number(retry.retcode) === 0) {
-          log.mark(
-            `[xhh-TL][撞码] uid=${uid} 第 ${i + 1} 次重试成功（累计等 ${RETRY_GAPS.slice(0, i + 1).reduce((a, b) => a + b, 0)}ms）`,
-          )
-          suppressLegacyNotice(e)
+          log.mark(`[xhh-TL][撞码] uid=${uid} 第 ${i + 1} 次重试成功`)
           return retry
         }
-        log.mark(`[xhh-TL][撞码] uid=${uid} 第 ${i + 1} 次重试仍失败: retcode=${retry?.retcode}`)
+        log.mark(`[xhh-TL][撞码] uid=${uid} 第 ${i + 1} 次重试失败: retcode=${retry?.retcode}`)
+        // 登录失效、隐私设置等业务错误不是继续过码能解决的，不重复请求。
+        if (retry && !CAPTCHA_RC.includes(Number(retry.retcode))) break
       }
-      // 窗口内没等到放行：过码确实做了，让用户重发一次比让他去手划靠谱
-      return this.blockedOnly(e, uid)
-    } catch (err) {
-      log.error(`[xhh-TL][撞码] 自动过码异常: ${err?.message}`)
-      return this.noticeOnly(e, uid)
+      await this.notice(e, uid, key, retry && CAPTCHA_RC.includes(Number(retry.retcode))
+        ? '已尝试自动验证并重试，米游社仍要求验证码，请稍后再试'
+        : '自动验证后查询仍未成功，请稍后再试')
+      return retry || args.res
+    } catch {
+      log.error(`[xhh-TL][撞码] uid=${uid} 自动验证或重试异常`)
+      await this.notice(e, uid, key, captchaTip())
+      return args.res
     }
   }
 
-  /** 兜底：只提醒用户稍后再试（过码服务没配/没成功时） */
-  async noticeOnly(e, uid) {
-    if (!e?.reply) return
+  async notice(e, uid, key, text) {
+    if (!e || typeof e.reply !== 'function') return
+    // checkCode 会在 handler 返回后补旧提示；即使并发失败也只保留本事件的一条说明。
+    suppressLegacyNotice(e, uid)
+    if (e.noTips === true) return
+    let sent = notices.get(e)
+    if (!sent) notices.set(e, sent = new Set())
+    if (sent.has(key)) return
+    sent.add(key)
     try {
-      await e.reply(`${uid ? `UID:${uid} ` : ''}${captchaTip()}`, quoteEnabled())
-    } catch (err) {
-      log.error(`[xhh-TL][撞码提醒] 发送失败: ${err?.message}`)
+      await e.reply(`${uid ? `UID:${uid} ` : ''}${text}`, quoteEnabled())
+    } catch {
+      log.error('[xhh-TL][撞码提醒] 发送失败')
+    } finally {
+      suppressLegacyNotice(e, uid)
     }
-    suppressLegacyNotice(e)
-  }
-
-  /**
-   * 自动过码已执行、但紧接的重试仍被风控：
-   * 过码是生效的，只是米游社那边还没松口，用户重发一次本条指令就能拿到数据
-   * （实测重发 #深渊 即正常返回）。所以只留一句「重发本条即可」，
-   * 不再引导用户去发 #过码 手划 —— 那件事后台已经做完了。
-   */
-  async blockedOnly(e, uid) {
-    if (!e?.reply) return
-    try {
-      await e.reply(`${uid ? `UID:${uid} ` : ''}已过码，重发本条即可`, quoteEnabled())
-    } catch (err) {
-      log.error(`[xhh-TL][撞码提醒] 发送失败: ${err?.message}`)
-    }
-    suppressLegacyNotice(e)
   }
 }
 
-/**
- * 短暂接管 e.reply：把 checkCode 紧随其后要发的那条旧提示吞掉。
- * 无论后续走哪个分支，下一轮事件循环一定恢复，不会长期占着 e.reply。
- */
-function suppressLegacyNotice(e) {
-  const orig = e?.reply
-  if (typeof orig !== 'function') return
-  let restored = false
-  const restore = () => {
-    if (restored) return
-    restored = true
-    e.reply = orig
+function suppressLegacyNotice(e, uid) {
+  let state = suppressions.get(e)
+  if (!state || e.reply !== state.wrapped) {
+    const original = e.reply
+    state = { original, uids: new Set(), timer: null }
+    state.wrapped = function (msg, ...rest) {
+      const parts = Array.isArray(msg) ? msg : [msg]
+      const hit = parts.some(part => typeof part === 'string' && /米游社查询遇到验证码/.test(part)
+        && [...state.uids].some(id => part.includes(`UID:${id}，`)))
+      return hit ? Promise.resolve() : original.call(this, msg, ...rest)
+    }
+    suppressions.set(e, state)
+    e.reply = state.wrapped
   }
-  e.reply = function (msg, ...rest) {
-    const hit = isLegacyNotice(msg)
-    restore()
-    if (hit) return Promise.resolve()
-    return orig.call(this, msg, ...rest)
-  }
-  setTimeout(restore, 0)
+  state.uids.add(uid)
+  clearTimeout(state.timer)
+  state.timer = setTimeout(() => {
+    if (e.reply === state.wrapped) e.reply = state.original
+    if (suppressions.get(e) === state) suppressions.delete(e)
+  }, 0)
 }

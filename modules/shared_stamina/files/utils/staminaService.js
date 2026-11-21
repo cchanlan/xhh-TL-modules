@@ -283,7 +283,9 @@ export async function callApi(e, type, game, uid, server, headers, silent = fals
   const ck = fetchHeaders.Cookie || '';
   if (ck && [1034, 10035, 10041].includes(Number(res?.retcode)) && config().auto_verify_addr) {
     logger.info?.(`[xhh-TL][api] ${type} 撞码 retcode=${res.retcode}，自动过码后重试`);
+    const challengeOut = {};
     const solved = await solveByLocalService({
+      challengeOut,
       cookie: ck,
       autoVerifyAddr: config().auto_verify_addr,
       device: fetchHeaders['x-rpc-device_id'] || '',
@@ -293,6 +295,7 @@ export async function callApi(e, type, game, uid, server, headers, silent = fals
       game: game || '',
     }).catch(() => false);
     if (solved) {
+      if (challengeOut.challenge) fetchHeaders['x-rpc-challenge'] = challengeOut.challenge;
       for (const gap of TRANSFORMER_RETRY_GAPS) {
         if (gap) await new Promise((r) => setTimeout(r, gap));
         res = await fetchOnce().catch(() => false);
@@ -301,9 +304,9 @@ export async function callApi(e, type, game, uid, server, headers, silent = fals
     }
   }
 
-  if (res.retcode !== 0 && !silent) {
+  if (res?.retcode !== 0 && !silent) {
     let msg;
-    switch (res.retcode) {
+    switch (res?.retcode) {
       case -1: case -100: case 1001: case 10001: case 10103:
         msg = `${uid ? 'UID:' + uid : ''}米游社查询失败，无法查询`;
         if (/(登录|login)/i.test(res.message)) {
@@ -1540,9 +1543,10 @@ export class StaminaService extends plugin {
                 // 指纹与 device_id 用同一枚设备（复刻用同一个，过码后重试换指纹等于换个身份进来，白过）
                 const noteDevice = `Yz-${md5(String(uid)).substring(0, 5)}`;
                 const noteFp = await fetchDeviceFp(uid, ck, noteDevice);
+                const challengeOut = {};
                 const fetchNote = () => fetch(noteUrl, {
                   method: 'GET',
-                  headers: getHeaders(e, ck, true, null, noteFp, noteDevice),
+                  headers: { ...getHeaders(e, ck, true, null, noteFp, noteDevice), ...(challengeOut.challenge ? { 'x-rpc-challenge': challengeOut.challenge } : {}) },
                   signal: AbortSignal.timeout(12000),
                 }).then((r) => r.json()).catch(() => false);
                 let noteRes = noteFp ? await fetchNote() : false;
@@ -1550,6 +1554,7 @@ export class StaminaService extends plugin {
                 if (noteRes && [1034, 10035, 10041].includes(Number(noteRes.retcode)) && config().auto_verify_addr) {
                   logger.info?.(`[xhh-TL][transformer] dailyNote 撞码 retcode=${noteRes.retcode}，自动过码后重试`);
                   const solved = await solveByLocalService({
+                    challengeOut,
                     cookie: ck,
                     autoVerifyAddr: config().auto_verify_addr,
                     device: noteDevice,
@@ -1669,7 +1674,10 @@ export class StaminaService extends plugin {
 
     const device = headers['x-rpc-device_id'] || '';
     logger.info?.(`[xhh-TL][note][zzz] uid=${uid} 撞码 retcode=${retcode}，自动过码后重试`);
+    const challengeOut = {};
     const solved = await solveByLocalService({
+      challengeOut,
+      deviceFp: headers['x-rpc-device_fp'] || '',
       cookie: ck,
       autoVerifyAddr: autoAddr,
       device,
@@ -1677,6 +1685,7 @@ export class StaminaService extends plugin {
       clientType: '2',
     }).catch(() => false);
     if (!solved) return false;
+    headers = { ...headers, ...(challengeOut.challenge ? { 'x-rpc-challenge': challengeOut.challenge } : {}) };
 
     for (const gap of TRANSFORMER_RETRY_GAPS) {
       if (gap) await new Promise((r) => setTimeout(r, gap));

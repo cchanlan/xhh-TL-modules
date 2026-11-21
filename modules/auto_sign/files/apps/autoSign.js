@@ -168,10 +168,6 @@ export class autoSign extends plugin {
     }
     const lines = [`${label}签到结果：`]
     for (const r of results) lines.push(`· ${r.uid}：${r.msg}`)
-    if (results.some((r) => r.code === 'captcha')) {
-      // 配了自动过码服务时，撞码的号已经自动处理过了，这里只说结果
-      lines.push(`（撞验证码的号已自动处理，重发本条即可）`)
-    }
     e.reply(lines.join('\n'), quoteEnabled())
     return true
   }
