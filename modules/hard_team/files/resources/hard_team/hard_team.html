@@ -1,80 +1,34 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="{{ppath}}hard_team/hard_team.css" />
-  <style id="rem-root">html { font-size: {{scalePx}}px; }</style>
-</head>
+<head><meta charset="utf-8"><link rel="stylesheet" href="{{ppath}}hard_team/hard_team.css?v=20261122-tactics-board"><style>html { font-size: {{scalePx}}px; }</style></head>
 <body class="theme-{{theme}}">
-  <div class="container" id="container" style="{{if bgImage}}background: url('{{bgImage}}') center/cover no-repeat !important;{{/if}}">
-    <div class="xhh_box">
-      <div class="one_box">
-        <div class="tx">
-          <img class="qq_tx" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt="" />
-        </div>
-        <div class="zi">
-          <p class="name">{{qqname}}</p>
-          <div class="zi_">
-            <div class="title-line">
-              <span class="badge">危战配队</span>
-              <span class="sub">幽境危战 · 出场配队建议</span>
-            </div>
-            <div class="meta-line">
-              {{if version}}<span>版本 {{version}}</span><span class="dot">·</span>{{/if}}
-              <span>{{generatedAt}}</span>
-              {{if lastUpdate}}<span class="dot">·</span><span>更新 {{lastUpdate}}</span>{{/if}}
-            </div>
-            <div class="mod-tags">
-              <span class="mod-tag on">提瓦特小助手</span>
-              <span class="mod-tag {{if hasCk}}on{{else}}off{{/if}}">{{if hasCk}}已按本人练度排序{{else}}通用榜(未绑定CK){{/if}}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="notice">
-        <span class="notice-title">配队说明</span>
-        <ul>
-          <li>数据来自<strong>提瓦特小助手</strong>，为其用户自主上传的幽境危战挑战记录统计</li>
-          <li>危战分<strong>上 / 中 / 下</strong>三关强敌，各关列出高频完整 4 人队，按出场热度{{if hasCk}}结合<strong>你的练度</strong>{{/if}}排序</li>
-          <li>灰显角色代表你<strong>暂未持有</strong>，配队<strong>仅供参考</strong>，可按练度灵活调整</li>
-          {{if tips}}<li>{{tips}}</li>{{/if}}
-        </ul>
-      </div>
-
-      {{each sections sec}}
-      <div class="floor-block">
-        <div class="floor-head">
-          <span class="floor-badge {{sec.cls}}">{{sec.label}}</span>
-          <span class="floor-meta">推荐配队 Top{{sec.teams.length}}</span>
-        </div>
-        <div class="team-grid">
-          {{each sec.teams team idx}}
-          <div class="team-card">
-            <div class="team-rank">
-              <span class="rank-no">配队 {{idx + 1}}</span>
-              <span class="rank-count">{{team.count}} 次出场</span>
-            </div>
-            <div class="half-cards team-n{{team.roles.length}}">
-              {{each team.roles a}}
-              <div class="mcard flat star-{{a.star}} {{if a.owned}}owned{{else}}no-own{{/if}}">
-                <div class="mcard-face">
-                  {{if a.face}}<img src="{{a.face}}" alt="" />{{else}}<div class="char-ph">?</div>{{/if}}
-                  {{if a.owned}}<span class="mcard-cons">{{a.cons}}</span>{{else}}<span class="mcard-none">暂无</span>{{/if}}
-                </div>
-                <div class="mcard-name">{{a.name}}</div>
-                <div class="mcard-lv">{{if a.owned}}Lv.{{a.level}}{{else}}未持有{{/if}}</div>
-              </div>
-              {{/each}}
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      {{/each}}
-
-      <div class="foot">小火花体力小组件 · 危战配队 · 数据仅供参考</div>
-    </div>
-  </div>
+<div class="stage" id="container" {{if bgImage}}style="background-image: url('{{bgImage}}');"{{/if}}>
+<main class="manual">
+<header class="masthead"><div class="brand-line"><span>小火花 <i>/</i> 原神配队手册</span><span>幽境危战 · 出场配队建议</span></div>
+<div class="cover"><div><p class="eyebrow">STYGIAN ONSLAUGHT / TEAM TACTICS</p><h1>危战配队</h1><p class="subtitle">三关强敌，逐区选队</p></div><div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt=""><div><strong class="account-name">{{qqname}}</strong><span class="account-status">{{if hasCk}}已按本人练度排序{{else}}通用榜(未绑定CK){{/if}}</span></div></div></div>
+<div class="metadata">{{if version}}<span class="version">版本 {{version}}</span>{{/if}}<span>获取 {{generatedAt}}</span>{{if lastUpdate}}<span>更新 {{lastUpdate}}</span>{{/if}}<span class="source">提瓦特小助手</span></div>
+</header>
+<section class="guide"><div class="guide-heading"><h2>配队说明</h2><span>4 人完整队 · 数据仅供参考</span></div><ul><li>数据来自<strong>提瓦特小助手</strong>，为其用户自主上传的幽境危战挑战记录统计</li>
+<li>危战分<strong>上 / 中 / 下</strong>三关强敌，各关列出高频完整 4 人队，按出场热度{{if hasCk}}结合<strong>你的练度</strong>{{/if}}排序</li>
+<li>灰显角色代表你<strong>暂未持有</strong>，配队<strong>仅供参考</strong>，可按练度灵活调整</li>
+{{if tips}}<li>{{tips}}</li>{{/if}}</ul></section>
+{{each sections sec}}
+<section class="tactics area-tactics area-{{sec.cls}}" data-area="{{sec.cls}}">
+<header class="tactics-heading"><div class="section-title"><span class="area-marker {{sec.cls}}"></span><div><h2>{{sec.label}}</h2><p>完整四人阵容</p></div></div><span class="top-count">推荐配队 <b>Top {{sec.teams.length}}</b></span></header>
+<div class="single-list">
+{{each sec.teams team idx}}
+<div class="single-row" data-team="{{idx + 1}}"><div class="single-caption"><span class="rank-label">配队 {{idx + 1}}</span><span class="appearance"><b>{{team.count}}</b> 次出场</span></div>
+<div class="party">{{each team.roles a}}<div class="role {{if a.owned}}owned{{else}}unowned{{/if}}" data-star="{{a.star}}" data-owned="{{a.owned}}">
+<div class="role-portrait">{{if a.face}}<img src="{{a.face}}" alt="">{{else}}<span class="portrait-placeholder">?</span>{{/if}}{{if a.owned}}<span class="constellation">{{a.cons}}命</span>{{else}}<span class="unowned-mark">暂无</span>{{/if}}</div>
+<strong class="role-name">{{a.name}}</strong><div class="role-detail"><span class="role-level">{{if a.owned}}Lv.{{a.level}}{{else}}未持有{{/if}}</span><span class="rarity rarity-{{a.star}}">{{a.star}}★</span></div>
+</div>{{/each}}</div>
+</div>
+{{/each}}
+</div>
+</section>
+{{/each}}
+<footer class="colophon"><span>小火花体力小组件 · 危战配队 · 数据仅供参考</span><b>小火花</b></footer>
+</main>
+</div>
 </body>
 </html>

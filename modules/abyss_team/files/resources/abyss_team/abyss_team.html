@@ -1,101 +1,40 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="{{ppath}}abyss_team/abyss_team.css" />
-  <style id="rem-root">html { font-size: {{scalePx}}px; }</style>
-</head>
+<head><meta charset="utf-8"><link rel="stylesheet" href="{{ppath}}abyss_team/abyss_team.css?v=20261122-tactics-board"><style>html { font-size: {{scalePx}}px; }</style></head>
 <body class="theme-{{theme}}">
-  <div class="container" id="container" style="{{if bgImage}}background: url('{{bgImage}}') center/cover no-repeat !important;{{/if}}">
-    <div class="xhh_box">
-      <div class="one_box">
-        <div class="tx">
-          <img class="qq_tx" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt="" />
-        </div>
-        <div class="zi">
-          <p class="name">{{qqname}}</p>
-          <div class="zi_">
-            <div class="title-line">
-              <span class="badge">深渊配队</span>
-              <span class="sub">深境螺旋 · 出场配队建议</span>
-            </div>
-            <div class="meta-line">
-              {{if version}}<span>版本 {{version}}</span><span class="dot">·</span>{{/if}}
-              <span>{{generatedAt}}</span>
-              {{if lastUpdate}}<span class="dot">·</span><span>更新 {{lastUpdate}}</span>{{/if}}
-            </div>
-            <div class="mod-tags">
-              <span class="mod-tag on">提瓦特小助手</span>
-              <span class="mod-tag {{if hasCk}}on{{else}}off{{/if}}">{{if hasCk}}已按本人练度排序{{else}}通用榜(未绑定CK){{/if}}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="notice">
-        <span class="notice-title">配队说明</span>
-        <ul>
-          <li>数据来自<strong>提瓦特小助手</strong>，为其用户自主上传的深渊挑战记录统计</li>
-          <li>已把上半 / 下半的高频半队两两拼成完整双队，按出场热度{{if hasCk}}结合<strong>你的练度</strong>{{/if}}排序</li>
-          <li>灰显角色代表你<strong>暂未持有</strong>，配队<strong>仅供参考</strong>，可按练度灵活调整</li>
-          <li>月初深渊刚刷新时样本较少，几天后数据更稳定</li>
-        </ul>
-      </div>
-
-      {{each floors fl}}
-      <div class="floor-block">
-        <div class="floor-head">
-          <span class="floor-badge">第 {{fl.floor}} 层</span>
-          <span class="floor-meta">推荐配队 Top{{fl.teams.length}}</span>
-        </div>
-        <div class="team-grid">
-          {{each fl.teams team idx}}
-          <div class="team-card">
-            <div class="team-rank">
-              <span class="rank-no">配队 {{idx + 1}}</span>
-              <span class="rank-count">{{team.count}} 次出场</span>
-            </div>
-            <div class="team-halves">
-              <div class="half">
-                <div class="half-tag up">上半</div>
-                <div class="half-cards team-n{{team.up.length}}">
-                  {{each team.up a}}
-                  <div class="mcard flat star-{{a.star}} {{if a.owned}}owned{{else}}no-own{{/if}}">
-                    <div class="mcard-face">
-                      {{if a.face}}<img src="{{a.face}}" alt="" />{{else}}<div class="char-ph">?</div>{{/if}}
-                      {{if a.owned}}<span class="mcard-cons">{{a.cons}}</span>{{else}}<span class="mcard-none">暂无</span>{{/if}}
-                    </div>
-                    <div class="mcard-name">{{a.name}}</div>
-                    <div class="mcard-lv">{{if a.owned}}Lv.{{a.level}}{{else}}未持有{{/if}}</div>
-                  </div>
-                  {{/each}}
-                </div>
-              </div>
-              <div class="half-divider"></div>
-              <div class="half">
-                <div class="half-tag down">下半</div>
-                <div class="half-cards team-n{{team.down.length}}">
-                  {{each team.down a}}
-                  <div class="mcard flat star-{{a.star}} {{if a.owned}}owned{{else}}no-own{{/if}}">
-                    <div class="mcard-face">
-                      {{if a.face}}<img src="{{a.face}}" alt="" />{{else}}<div class="char-ph">?</div>{{/if}}
-                      {{if a.owned}}<span class="mcard-cons">{{a.cons}}</span>{{else}}<span class="mcard-none">暂无</span>{{/if}}
-                    </div>
-                    <div class="mcard-name">{{a.name}}</div>
-                    <div class="mcard-lv">{{if a.owned}}Lv.{{a.level}}{{else}}未持有{{/if}}</div>
-                  </div>
-                  {{/each}}
-                </div>
-              </div>
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      {{/each}}
-
-      <div class="foot">小火花体力小组件 · 深渊配队 · 数据仅供参考</div>
-    </div>
-  </div>
+<div class="stage" id="container" {{if bgImage}}style="background-image: url('{{bgImage}}');"{{/if}}>
+<main class="manual">
+<header class="masthead"><div class="brand-line"><span>小火花 <i>/</i> 原神配队手册</span><span>深境螺旋 · 出场配队建议</span></div>
+<div class="cover"><div><p class="eyebrow">SPIRAL ABYSS / TEAM TACTICS</p><h1>深渊配队</h1><p class="subtitle">上下半，一组看齐</p></div><div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt=""><div><strong class="account-name">{{qqname}}</strong><span class="account-status">{{if hasCk}}已按本人练度排序{{else}}通用榜(未绑定CK){{/if}}</span></div></div></div>
+<div class="metadata">{{if version}}<span class="version">版本 {{version}}</span>{{/if}}<span>获取 {{generatedAt}}</span>{{if lastUpdate}}<span>更新 {{lastUpdate}}</span>{{/if}}<span class="source">提瓦特小助手</span></div>
+</header>
+<section class="guide"><div class="guide-heading"><h2>配队说明</h2><span>4 + 4 双队 · 数据仅供参考</span></div><ul><li>数据来自<strong>提瓦特小助手</strong>，为其用户自主上传的深渊挑战记录统计</li>
+<li>已把上半 / 下半的高频半队两两拼成完整双队，按出场热度{{if hasCk}}结合<strong>你的练度</strong>{{/if}}排序</li>
+<li>灰显角色代表你<strong>暂未持有</strong>，配队<strong>仅供参考</strong>，可按练度灵活调整</li>
+<li>月初深渊刚刷新时样本较少，几天后数据更稳定</li></ul></section>
+{{each floors fl}}
+<section class="tactics floor-tactics" data-floor="{{fl.floor}}">
+<header class="tactics-heading"><div class="section-title"><b class="floor-number">{{fl.floor}}</b><div><h2>第 {{fl.floor}} 层</h2><p>上下半组合推荐</p></div></div><span class="top-count">推荐配队 <b>Top {{fl.teams.length}}</b></span></header>
+<div class="duo-head"><span>方案 / 出场</span><b class="side up">上半阵容</b><b class="side down">下半阵容</b></div>
+<div class="duo-list">
+{{each fl.teams team idx}}
+<div class="duo-row" data-team="{{idx + 1}}">
+<div class="rank"><span class="rank-label">配队 {{idx + 1}}</span><b>{{team.count}}</b><small>次出场</small></div>
+<div class="party" data-side="up">{{each team.up a}}<div class="role {{if a.owned}}owned{{else}}unowned{{/if}}" data-star="{{a.star}}" data-owned="{{a.owned}}">
+<div class="role-portrait">{{if a.face}}<img src="{{a.face}}" alt="">{{else}}<span class="portrait-placeholder">?</span>{{/if}}{{if a.owned}}<span class="constellation">{{a.cons}}命</span>{{else}}<span class="unowned-mark">暂无</span>{{/if}}</div>
+<strong class="role-name">{{a.name}}</strong><div class="role-detail"><span class="role-level">{{if a.owned}}Lv.{{a.level}}{{else}}未持有{{/if}}</span><span class="rarity rarity-{{a.star}}">{{a.star}}★</span></div>
+</div>{{/each}}</div>
+<div class="party second-party" data-side="down">{{each team.down a}}<div class="role {{if a.owned}}owned{{else}}unowned{{/if}}" data-star="{{a.star}}" data-owned="{{a.owned}}">
+<div class="role-portrait">{{if a.face}}<img src="{{a.face}}" alt="">{{else}}<span class="portrait-placeholder">?</span>{{/if}}{{if a.owned}}<span class="constellation">{{a.cons}}命</span>{{else}}<span class="unowned-mark">暂无</span>{{/if}}</div>
+<strong class="role-name">{{a.name}}</strong><div class="role-detail"><span class="role-level">{{if a.owned}}Lv.{{a.level}}{{else}}未持有{{/if}}</span><span class="rarity rarity-{{a.star}}">{{a.star}}★</span></div>
+</div>{{/each}}</div>
+</div>
+{{/each}}
+</div>
+</section>
+{{/each}}
+<footer class="colophon"><span>小火花体力小组件 · 深渊配队 · 数据仅供参考</span><b>小火花</b></footer>
+</main>
+</div>
 </body>
 </html>
