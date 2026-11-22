@@ -1,38 +1,10 @@
-{{set a = $data.a || $data || {} }}
+{{set a = $data.a || {} }}
 {{set t = a.talent || {} }}
 {{set w = a.weapon || {} }}
 {{set ar = a.artis || {} }}
-<div class="mcard star-{{a.star}}">
-  <div class="mcard-face">
-    {{if a.face}}
-    <img src="{{a.face}}" alt="" />
-    {{else}}
-    <div class="char-ph">?</div>
-    {{/if}}
-    <span class="mcard-cons">{{a.cons != null ? a.cons : 0}}</span>
-  </div>
-  <div class="mcard-lv">Lv.{{a.level}} {{a.name}}</div>
-  <div class="mcard-talent">
-    <span>{{t.a !== '' && t.a != null ? t.a : '-'}}</span>
-    <span>{{t.e !== '' && t.e != null ? t.e : '-'}}</span>
-    <span>{{t.q !== '' && t.q != null ? t.q : '-'}}</span>
-  </div>
-  <div class="mcard-gear">
-    <div class="gbox">
-      {{if w.img}}
-      <img src="{{w.img}}" alt="" />
-      {{if w.affix != null && w.affix !== ''}}<i>{{w.affix}}</i>{{/if}}
-      {{else}}
-      <span class="gempty"></span>
-      {{/if}}
-    </div>
-    <div class="gbox artis">
-      {{if ar.imgs && ar.imgs[0]}}
-      <img class="a1" src="{{ar.imgs[0]}}" alt="" />
-      {{if ar.imgs[1]}}<img class="a2" src="{{ar.imgs[1]}}" alt="" />{{/if}}
-      {{else}}
-      <span class="gempty"></span>
-      {{/if}}
-    </div>
-  </div>
-</div>
+<article class="actor" data-id="{{a.id}}" data-name="{{a.name}}" data-trial="{{!!a.typeLabel}}">
+<div class="actor-portrait">{{if a.face || a.gacha}}<img src="{{a.face || a.gacha}}" alt="">{{else}}<span class="portrait-placeholder">?</span>{{/if}}<span class="actor-badge">{{if a.typeLabel}}{{a.typeLabel}}{{else}}{{a.cons != null ? a.cons + '命' : '命座 —'}}{{/if}}</span>{{if $data.highlightUp && a.isUp}}<span class="popularity">赋光 UP</span>{{/if}}</div>
+<strong class="actor-name">{{a.name}}</strong><div class="actor-meta"><span>Lv.{{a.level || '—'}}</span><span>{{a.star}}★</span></div>
+<div class="talents"><span><small>普攻</small><b>{{!a.typeLabel && t.a !== '' && t.a != null ? t.a : '—'}}</b></span><span><small>战技</small><b>{{!a.typeLabel && t.e !== '' && t.e != null ? t.e : '—'}}</b></span><span><small>爆发</small><b>{{!a.typeLabel && t.q !== '' && t.q != null ? t.q : '—'}}</b></span></div>
+<div class="equipment"><div class="gear-line"><span class="gear-icon">{{if w.img && !a.typeLabel}}<img src="{{w.img}}" alt="">{{/if}}</span><span class="gear-copy"><small>武器</small><strong>{{!a.typeLabel ? (w.name || w.abbr || '—') : '—'}}</strong>{{if !a.typeLabel && w.affix != null && w.affix !== ''}}<em>精炼 {{w.affix}}</em>{{/if}}</span></div><div class="gear-line"><span class="gear-icon artifact-icons">{{if ar.imgs && !a.typeLabel}}{{each ar.imgs image}}<img src="{{image}}" alt="">{{/each}}{{/if}}</span><span class="gear-copy"><small>圣遗物</small><strong>{{!a.typeLabel ? (ar.name || (ar.names || []).join(' + ') || '—') : '—'}}</strong></span></div></div>
+</article>

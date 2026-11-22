@@ -192,12 +192,19 @@ export class TL extends StaminaService {
     }
     if (Object.values(resultData).every(v => v === '没有')) {
       if (hasAllData) {
-        e.reply(await this.noAccountTip(overviewQq, '没有绑定米游社，请【#扫码登录】米游社'), quoteEnabled());
+        const fallback = targetQq && String(targetQq) !== String(e.user_id)
+          ? '被查询用户没有可用的米游社登录凭据，请对方发送【#扫码登录】后再查询体力。'
+          : '没有可用的米游社登录凭据，请发送【#扫码登录】后再查询体力。';
+        await e.reply(await this.noAccountTip(overviewQq, fallback), quoteEnabled());
       }
       return true;
     }
     if (Object.values(resultData).every(v => v === '过期')) {
-      if (hasAllData) e.reply('米游社验证已过期，请【#刷新ck】，仍不行则【#扫码登录】', quoteEnabled());
+      if (hasAllData) {
+        const subject = targetQq && String(targetQq) !== String(e.user_id) ? '被查询用户的' : '你的';
+        const action = targetQq && String(targetQq) !== String(e.user_id) ? '请对方发送' : '请发送';
+        await e.reply(`${subject}米游社登录验证已过期，${action}【#刷新ck】，仍不行则【#扫码登录】。`, quoteEnabled());
+      }
       return true;
     }
 

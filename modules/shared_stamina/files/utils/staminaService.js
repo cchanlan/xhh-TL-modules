@@ -1245,6 +1245,12 @@ export class StaminaService extends plugin {
   // （见 resinPush.pushOne）。用户主动查询不传，照常带全明细。
   async note(e, game = 'gs', san = true, targetQq = null, forceUid = null, opts = {}) {
     const qq = targetQq || e.originalUserId || e.user_id;
+    const isOther = String(qq) !== String(e.originalUserId || e.user_id);
+    const subject = isOther ? '被查询用户' : '你';
+    const gameLabel = GAME_LABEL[game] || '当前游戏';
+    const loginTip = isOther
+      ? '请对方发送【#扫码登录】后再查询体力'
+      : '请发送【#扫码登录】后再查询体力';
     let uid;
     if (forceUid) {
       uid = forceUid;
@@ -1260,7 +1266,7 @@ export class StaminaService extends plugin {
     }
 
     if (!uid) {
-      if (!san) e.reply('未发现绑定的 uid，请【#扫码登录】米游社~');
+      if (!san) await e.reply(`${subject}未绑定${gameLabel} UID，${loginTip}。`, quoteEnabled());
       return '没有';
     }
 
@@ -1272,8 +1278,8 @@ export class StaminaService extends plugin {
         const alt = (await this.listBoundUids(e, game, qq)).find((u) => !hidden.has(u));
         if (!alt) {
           if (!san) {
-            e.reply(
-              `你已屏蔽${GAME_LABEL[game]}全部 UID 的体力显示，发【#开启${GAME_LABEL[game]}${uid}】可恢复`,
+            await e.reply(
+              `${subject}已屏蔽${gameLabel}全部 UID 的体力显示，${isOther ? '请对方' : '可'}发【#开启${gameLabel}${uid}】恢复`,
               true,
             );
           }
@@ -1292,7 +1298,16 @@ export class StaminaService extends plugin {
         (!binding.hasRow || binding.ids.has(String(sid))) &&
         (mys?.uids?.[game] || []).map(String).includes(String(uid))
       );
-      if (!owned) return '没有';
+      if (!owned) {
+        logger.debug?.(`[xhh-TL][note] 跳过无账号归属凭据的体力查询：game=${game} qq=${qq} uid=${uid}`);
+        if (!san) {
+          await e.reply(
+            `${subject}的${gameLabel} UID ${uid} 没有有效的米游社登录凭据，${loginTip}。`,
+            quoteEnabled(),
+          );
+        }
+        return '没有';
+      }
     }
 
     let sk = await getstoken(qq, uid, e);
@@ -1317,7 +1332,7 @@ export class StaminaService extends plugin {
 
     if (!sk) {
       if (!san)
-        e.reply('UID:' + uid + ' 未绑定，请【#扫码登录】米游社~', quoteEnabled());
+        await e.reply(`${subject}的${gameLabel} UID ${uid} 没有可用的米游社登录凭据，${loginTip}。`, quoteEnabled());
       return '没有';
     }
     // sk 可能是纯 cookie：无扫码 stoken 的用户走 getstoken 的 SQLite 兜底，
@@ -1362,10 +1377,11 @@ export class StaminaService extends plugin {
       if (!san) {
         // zzz 的 widget 只认 stoken，纯 cookie 账号固定 -100「请先登录后参与活动」。
         // 这不是 CK 过期，提示「刷新ck」会把人带偏，直接让他扫码拿 stoken。
-        e.reply(
+        await e.reply(
           game === 'zzz'
-            ? '绝区零体力需要扫码登录的 stoken，普通 Cookie 查不了，请发【#扫码登录】~'
-            : '登录验证过期，请【#刷新ck】，仍不行则【#扫码登录】',
+            ? `${isOther ? '被查询用户的' : ''}绝区零体力需要扫码登录凭据，${loginTip}。`
+            : `${isOther ? '被查询用户的' : '你的'}米游社登录验证已过期，${isOther ? '请对方发送' : '请发送'}【#刷新ck】，仍不行则【#扫码登录】。`,
+          quoteEnabled(),
         );
       }
       return '过期';
