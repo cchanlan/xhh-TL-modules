@@ -1,132 +1,37 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="{{ppath}}role_combat/mini_role_combat.css?v=20261002-mask40" />
-  <style id="rem-root">html { font-size: {{scalePx}}px; }</style>
-</head>
+<head><meta charset="utf-8"><link rel="stylesheet" href="{{ppath}}role_combat/mini_role_combat.css?v=20261122-combat-journal"><style>html { font-size: {{scalePx}}px; }</style></head>
 <body class="theme-{{theme}}">
-  <div class="container" id="container" {{if bgImage}}style="background: url('{{bgImage}}') center/cover no-repeat !important;"{{/if}}>
-    <div class="xhh_box">
-      <div class="one_box">
-        <div class="tx">
-          <img class="qq_tx" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt="" />
-        </div>
-        <div class="zi">
-          <p class="name">{{qqname}}</p>
-          <div class="zi_">
-            <div class="title-line">
-              <span class="badge">小剧诗</span>
-              <span class="sub">{{periodText}} · {{month}}月 · {{difficulty}}</span>
-            </div>
-            <div class="meta-line">
-              <span>UID {{uid}}</span>
-              <span class="dot">·</span>
-              <span>关键 {{stageCount}} 关</span>
-              <span class="dot">·</span>
-              <span>星章 {{medal}}/{{medalTotal}}</span>
-            </div>
-            <div class="meta-line">
-              <span>总耗时 {{totalTime}} 秒</span>
-              <span class="dot">·</span>
-              <span>幻剧之花 {{coin}}</span>
-            </div>
-            <div class="time-line">
-              <span class="time_label">获取时间</span>
-              <span class="time_value">{{generatedAt}}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-label">关键关卡 · 通关角色</div>
-      <div class="boss-list">
-        {{each stages s}}
-        <div class="boss-card {{s.kind}}">
-          <div class="boss-head">
-            <div class="head-left">
-              <span class="medal {{if s.is_get_medal}}on{{else}}off{{/if}}"></span>
-              <span class="stage">{{s.title}}</span>
-            </div>
-            <div class="head-right">{{s.finish_time}}</div>
-          </div>
-
-          <div class="boss-body">
-            <div class="team mcard-team">
-              {{each s.avatars a}}
-              <div class="mcard star-{{a.star}}">
-                <div class="mcard-face">
-                  {{if a.face}}
-                  <img src="{{a.face}}" alt="" />
-                  {{else}}
-                  <div class="char-ph">?</div>
-                  {{/if}}
-                  {{if a.typeLabel}}
-                  <span class="mcard-cons trial">{{a.typeLabel}}</span>
-                  {{else}}
-                  <span class="mcard-cons">{{a.cons}}</span>
-                  {{/if}}
-                </div>
-                <div class="mcard-lv">Lv.{{a.level}}</div>
-                <div class="mcard-name">{{a.name}}</div>
-                <div class="mcard-talent">
-                  <span>{{a.talent.a !== '' && a.talent.a != null ? a.talent.a : '-'}}</span>
-                  <span>{{a.talent.e !== '' && a.talent.e != null ? a.talent.e : '-'}}</span>
-                  <span>{{a.talent.q !== '' && a.talent.q != null ? a.talent.q : '-'}}</span>
-                </div>
-                <div class="mcard-gear">
-                  <div class="gbox">
-                    {{if a.weapon && a.weapon.img && !a.typeLabel}}
-                    <img src="{{a.weapon.img}}" alt="" />
-                    {{if a.weapon.affix != null && a.weapon.affix !== ''}}<i>{{a.weapon.affix}}</i>{{/if}}
-                    {{else}}
-                    <span class="gempty"></span>
-                    {{/if}}
-                  </div>
-                  <div class="gbox artis">
-                    {{if a.artis && a.artis.imgs && a.artis.imgs[0] && !a.typeLabel}}
-                    <img class="a1" src="{{a.artis.imgs[0]}}" alt="" />
-                    {{if a.artis.imgs[1]}}<img class="a2" src="{{a.artis.imgs[1]}}" alt="" />{{/if}}
-                    {{else}}
-                    <span class="gempty"></span>
-                    {{/if}}
-                  </div>
-                </div>
-              </div>
-              {{/each}}
-              {{if !s.avatars || !s.avatars.length}}
-              <div class="empty">无角色数据</div>
-              {{/if}}
-            </div>
-
-            <div class="enemy-box">
-              <div class="enemy-label">讨伐</div>
-              <div class="enemy-list">
-                {{each s.enemies en}}
-                <div class="enemy-item">
-                  {{if en.icon}}
-                  <img class="enemy-icon" src="{{en.icon}}" alt="" />
-                  {{/if}}
-                  <div class="enemy-text">
-                    <span class="enemy-name">{{en.name}}</span>
-                    {{if en.level}}<span class="enemy-lv">Lv.{{en.level}}</span>{{/if}}
-                  </div>
-                </div>
-                {{/each}}
-                {{if !s.enemies || !s.enemies.length}}
-                <span class="enemy-name">—</span>
-                {{/if}}
-              </div>
-            </div>
-          </div>
-        </div>
-        {{/each}}
-      </div>
-
-      <footer>
-        仅展示第 3/6/8/10 幕 + 圣牌 · 天赋/武器/圣遗物 · from 小火花
-      </footer>
-    </div>
-  </div>
-</body>
-</html>
+<div class="stage" id="container" {{if bgImage}}style="background-image: url('{{bgImage}}');"{{/if}}>
+<main class="journal">
+<header class="masthead">
+<div class="brand-line"><span>小火花 <i>/</i> 原神通关手册</span><span>幻想真境剧诗 · 关键关卡</span></div>
+<div class="cover"><div><p class="eyebrow">IMAGINARIUM THEATER / BATTLE JOURNAL</p><h1>小幻想 · 通关记录</h1><p class="subtitle">{{periodText}} · {{month}}月 · {{difficulty}}难度</p></div>
+<div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}" alt=""><div class="account-copy"><strong class="account-name">{{qqname}}</strong><span class="account-uid">UID {{uid}}</span><span class="account-status">个人关键关卡速览</span></div></div></div>
+<div class="summary"><div><span>关键关卡</span><b>{{stageCount}}<small> 关</small></b></div><div><span>星章 / 圣牌</span><b>{{medal}}<small> / {{medalTotal}}</small></b></div><div><span>总耗时</span><b>{{totalTime}}<small> 秒</small></b></div><div><span>幻剧之花</span><b>{{coin}}</b></div></div>
+<div class="metadata"><span>获取 {{generatedAt}}</span><span>第 3 / 6 / 8 / 10 幕 + 圣牌</span><span>来源：米游社战报</span></div>
+{{if detailUnavailable}}<p class="data-notice">角色资料暂未完整刷新：保留战报及可用缓存，未取得的装备 / 天赋显示“—”。</p>{{/if}}
+</header>
+<section class="records"><div class="section-heading"><h2>关键关卡 · 通关角色</h2><span>阵容与讨伐目标，一关看齐</span></div>
+{{each stages s}}
+<section class="encounter {{s.kind}}" data-stage="{{s.key}}">
+<header class="encounter-head"><div class="encounter-title"><span class="medal {{if s.is_get_medal}}on{{else}}off{{/if}}">✦</span><h3>{{s.title}}</h3><span class="medal-status">{{if s.kind === 'tarot'}}{{if s.is_get_medal}}已获圣牌{{else}}未获圣牌{{/if}}{{else}}{{if s.is_get_medal}}已获星章{{else}}未获星章{{/if}}{{/if}}</span></div><div class="encounter-meta"><span class="finish-time">{{if s.finish_time}}通关 {{s.finish_time}}{{else}}通关时间 —{{/if}}</span>{{if !s.enemies || !s.enemies.length}}<span class="empty-enemies">讨伐目标：战报未提供</span>{{/if}}</div></header>
+<div class="encounter-body {{if !s.enemies || !s.enemies.length}}no-enemies{{/if}}"><div class="team">
+{{each s.avatars a}}
+<article class="actor" data-id="{{a.id}}" data-type="{{a.type}}">
+<div class="portrait">{{if a.face}}<img src="{{a.face}}" alt="">{{else}}<span class="portrait-placeholder">?</span>{{/if}}
+<span class="actor-badge">{{if a.typeLabel}}{{a.typeLabel}}{{else}}{{if a.cons != null}}{{a.cons}}命{{else}}命座 —{{/if}}{{/if}}</span></div>
+<strong class="actor-name">{{a.name}}</strong><div class="actor-meta"><span>Lv.{{a.level || '—'}}</span><span class="rarity star-{{a.star}}">{{a.star}}★</span></div>
+<div class="talents"><span><small>普攻</small><b>{{a.talent.a !== '' && a.talent.a != null ? a.talent.a : '—'}}</b></span><span><small>战技</small><b>{{a.talent.e !== '' && a.talent.e != null ? a.talent.e : '—'}}</b></span><span><small>爆发</small><b>{{a.talent.q !== '' && a.talent.q != null ? a.talent.q : '—'}}</b></span></div>
+<div class="equipment"><div class="gear-line weapon"><span class="gear-icon">{{if a.weapon && a.weapon.img && !a.typeLabel}}<img src="{{a.weapon.img}}" alt="">{{/if}}</span><span class="gear-copy"><small>武器</small><strong>{{if a.weapon && !a.typeLabel}}{{a.weapon.name || a.weapon.abbr || '—'}}{{else}}—{{/if}}</strong>{{if a.weapon && a.weapon.affix != null && a.weapon.affix !== '' && !a.typeLabel}}<em>精炼 {{a.weapon.affix}}</em>{{/if}}</span></div>
+<div class="gear-line artifacts"><span class="gear-icon artifact-icons">{{if a.artis && a.artis.imgs && !a.typeLabel}}{{each a.artis.imgs image}}<img src="{{image}}" alt="">{{/each}}{{/if}}</span><span class="gear-copy"><small>圣遗物</small><strong>{{if a.artis && !a.typeLabel}}{{a.artis.name || '—'}}{{else}}—{{/if}}</strong></span></div></div>
+{{if a.type === 1 && a.detailSource === 'cached'}}<span class="detail-source">含本地缓存</span>{{/if}}
+</article>
+{{/each}}
+{{if !s.avatars || !s.avatars.length}}<p class="empty">无角色数据</p>{{/if}}
+</div>{{if s.enemies && s.enemies.length}}<aside class="enemies"><h4>讨伐目标</h4><div class="enemy-list">{{each s.enemies en}}<div class="enemy-item">{{if en.icon}}<img class="enemy-icon" src="{{en.icon}}" alt="">{{/if}}<div class="enemy-copy"><strong>{{en.name}}</strong>{{if en.level}}<span>Lv.{{en.level}}</span>{{/if}}</div></div>{{/each}}{{if !s.enemies || !s.enemies.length}}<p class="empty">—</p>{{/if}}</div></aside>{{/if}}</div>
+</section>
+{{/each}}
+</section>
+<footer class="colophon"><p>仅展示第 3/6/8/10 幕 + 圣牌 · 天赋 / 武器 / 圣遗物</p><p>试用 / 助演不套用自有角色装备；装备与天赋为现有资料或缓存，并非通关时快照。</p><span>小火花体力小组件 · 小剧诗 / 小幻想</span></footer>
+</main></div></body></html>

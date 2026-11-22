@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<link rel="stylesheet" href="{{ppath}}hold_rate/hold_rate.css?v=20261122-ownership-atlas">
+<link rel="stylesheet" href="{{ppath}}hold_rate/hold_rate.css?v=20261122-account-identity">
 <style>html { font-size: {{scalePx}}px; }</style>
 </head>
 <body class="theme-{{theme}}">
@@ -11,7 +11,7 @@
 <header class="masthead">
 <div class="brand-line"><span>小火花 <i>/</i> 原神角色名册</span><span>深渊参与者 · 角色持有比例</span></div>
 <div class="cover">
-<div class="cover-copy"><p class="eyebrow">CHARACTER OWNERSHIP / GENSHIN IMPACT</p><h1>角色持有率</h1><p class="subtitle">按星级查角色，按比例看持有</p><div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt=""><strong class="account-name">{{qqname}}</strong></div></div>
+<div class="cover-copy"><p class="eyebrow">CHARACTER OWNERSHIP / GENSHIN IMPACT</p><h1>角色持有率</h1><p class="subtitle">按星级查角色，按比例看持有</p><div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}" alt=""><div class="account-copy"><strong class="account-name">{{qqname}}</strong><span class="account-uid">UID {{uid || '未绑定'}}</span></div></div></div>
 <div class="collection">{{if hasCk}}<span class="collection-label">我的持有 · 榜单内角色</span><div class="collection-count"><b>{{ownedCount}}</b><span>/ {{total}}</span></div><span class="collection-status">已持有 {{ownedCount}}/{{total}}</span>{{else}}<span class="collection-label">榜单角色</span><div class="collection-count"><b>{{total}}</b><span>位</span></div><span class="collection-status">通用榜(未绑定CK)</span>{{/if}}</div>
 </div>
 <div class="metadata">{{if version}}<span class="version">版本 {{version}}</span>{{/if}}<span>获取 {{generatedAt}}</span>{{if lastUpdate}}<span>更新 {{lastUpdate}}</span>{{/if}}<span class="source">提瓦特小助手</span></div>

@@ -6,6 +6,7 @@
 import path from 'path'
 import { Character, MysApi, Player } from '../../miao-plugin/models/index.js'
 import { prepareMysContext } from './runtimePatch.js'
+import { createUser } from './userBind.js'
 import { toFileUrl, pickRoleCombatBgImage, pluginDir } from './pluginConfig.js'
 
 // miao 的立绘资源目录：从插件目录往上推（<云崽根>/plugins/miao-plugin/resources），
@@ -26,6 +27,8 @@ export function resolveTargetQq(e) {
 export async function resolveDisplayName(e, qq) {
   const id = String(qq || '')
   if (!id) return ''
+  const sender = e.sender || {}
+  if (String(e.user_id) === id && (sender.card || sender.nickname)) return String(sender.card || sender.nickname)
   let name = ''
   try {
     if (e.isGroup || e.group) {
@@ -50,7 +53,7 @@ export async function resolveDisplayName(e, qq) {
   if (!name) {
     const s = e.sender || {}
     if (String(e.user_id) === id) {
-      name = (s.card && String(s.card).length < 20 ? s.card : '') || s.nickname || id
+      name = s.card || s.nickname || id
     } else {
       name = id
     }
@@ -90,15 +93,22 @@ export function pickGsBgImage(logTag = 'xhh-TL') {
  * @param {object} [opts]
  * @param {boolean} [opts.talent] 是否一并刷新天赋（配队按练度排序时需要）
  * @param {string} [opts.logTag] 日志标记
- * @returns {Promise<{ hasCk: boolean, avatarData: Record<string, object> }>}
+ * @returns {Promise<{ hasCk: boolean, uid: string, avatarData: Record<string, object> }>}
  *   avatarData 为 { 角色id: 面板对象 } 映射
  */
 export async function loadAvatarData(e, { talent = false, logTag = 'xhh-TL' } = {}) {
   const avatarData = {}
   let hasCk = false
+  let uid = ''
+  try {
+    const qq = resolveTargetQq(e) || e.user_id || e.sender?.user_id
+    const user = await createUser(qq, e)
+    uid = String(user?.getUid?.('gs') || '')
+  } catch (_) {}
   try {
     await prepareMysContext(e, 'gs')
     const mys = await MysApi.init(e, 'cookie')
+    if (mys?.uid) uid = String(mys.uid)
     if (mys && (await mys.checkCk())) {
       hasCk = true
       const player = Player.create(e)
@@ -117,5 +127,5 @@ export async function loadAvatarData(e, { talent = false, logTag = 'xhh-TL' } = 
   } catch (err) {
     logger.debug(`[${logTag}] 角色数据获取跳过:`, err?.message)
   }
-  return { hasCk, avatarData }
+  return { hasCk, uid, avatarData }
 }

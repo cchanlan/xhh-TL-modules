@@ -100,7 +100,7 @@ export class holdRate extends plugin {
     }
 
     // 取本人持有（有 CK 才能标记）
-    const { hasCk, avatarData } = await loadAvatarData(e, { logTag: 'xhh][holdRate' })
+    const { hasCk, uid, avatarData } = await loadAvatarData(e, { logTag: 'xhh][holdRate' })
     const ownedIds = new Set(Object.keys(avatarData))
 
     const built = buildGroups(data, ownedIds)
@@ -126,6 +126,7 @@ export class holdRate extends plugin {
     const renderData = {
       qq,
       qqname,
+      uid,
       bgImage,
       theme,
       version,

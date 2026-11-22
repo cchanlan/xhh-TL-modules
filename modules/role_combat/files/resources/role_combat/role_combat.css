@@ -129,3 +129,11 @@ h3 > span { color: var(--secondary); font-size: 12rem; font-weight: 400; }
 .colophon { display: flex; align-items: center; justify-content: space-between; gap: 16rem; padding-top: 16rem; color: var(--secondary); font-size: 12rem; }
 .colophon > div { display: flex; flex-wrap: wrap; gap: 5rem 14rem; }
 .colophon > b { flex-shrink: 0; font-size: 14rem; color: var(--accent); font-weight: 700; }
+
+/* Query account: QQ identity plus the corresponding game UID. */
+.identity { align-items: center; gap: 12rem; }
+.identity-avatar { flex: 0 0 48rem; width: 48rem; height: 48rem; border-radius: 50%; object-fit: cover; }
+.identity > div { min-width: 0; }
+.identity-name { display: block; overflow-wrap: anywhere; }
+.identity .identity-uid { display: block; font-size: 14rem; margin-top: 3rem; }
+.identity-mode { color: var(--secondary); font-size: 13rem; margin-top: 8rem; }

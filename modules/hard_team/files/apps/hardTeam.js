@@ -213,7 +213,7 @@ export class hardTeam extends plugin {
     if (!halfData) return e.reply('暂无可用的危战配队数据，请稍后重试~')
 
     // 取本人练度（有 CK 更准；无 CK 用通用榜）
-    const { hasCk, avatarData } = await loadAvatarData(e, { talent: true, logTag: 'xhh][hardTeam' })
+    const { hasCk, uid, avatarData } = await loadAvatarData(e, { talent: true, logTag: 'xhh][hardTeam' })
 
     const { ret, avatarMap } = computeHalves(halfData, avatarData)
     const sections = buildSections(ret, avatarMap)
@@ -234,6 +234,7 @@ export class hardTeam extends plugin {
     const renderData = {
       qq,
       qqname,
+      uid,
       bgImage,
       theme,
       version,

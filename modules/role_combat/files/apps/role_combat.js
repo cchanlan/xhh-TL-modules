@@ -7,6 +7,7 @@ import { config, pickRoleCombatBgImage, pluginDir, toFileUrl } from '../utils/pl
 import { replyProgress } from '../utils/replyHelper.js'
 import { renderTpl } from '../utils/render.js'
 import { guardModule } from '../utils/modules.js'
+import { resolveTargetQq, resolveDisplayName } from '../utils/gsHelper.js'
 
 import { fetchIndex, fetchPhase, findIndexByMonth, giMonsterDb, aliothText } from '../utils/alioth.js'
 
@@ -247,40 +248,15 @@ export class role_combat extends plugin {
   async queryRoleCombat(e, requestedMonth) {
     await replyProgress(e, '正在获取幻想真境剧诗数据，请稍后...');
 
-    // 检测 @提及
-    let targetQq = null;
-    let targetName = null;
-    let targetUid = null;
-    const selfId = e.self_id || (e.bot || Bot)?.uin;
-    for (const msg of e.message || []) {
-      if (msg.type === 'at' && String(msg.qq) !== String(selfId)) {
-        targetQq = msg.qq;
-        break;
-      }
-    }
-    // 将 @目标写回 e.at，确保 MysInfo/MysApi 查询的是被@的人而非发送者
-    if (targetQq) e.at = String(targetQq);
-
-    // 获取被@用户的昵称和UID
-    if (targetQq && e.group) {
-      try {
-        const member = e.group.pickMember?.(targetQq);
-        if (member?.nickname) {
-          targetName = member.nickname;
-        } else {
-          const bot = e.bot || Bot;
-          const info = await bot.getGroupMemberInfo?.(String(e.group_id), String(targetQq));
-          if (info?.nickname) targetName = info.nickname;
-        }
-      } catch (_) {}
-      if (!targetName) targetName = String(targetQq);
-
-      // 获取被@用户的UID（兼容层，不依赖 genshin import）
-      try {
-        const noteUser = await createUser(targetQq, e);
-        targetUid = noteUser?.getUid('gs');
-      } catch (_) {}
-    }
+    const targetQq = resolveTargetQq(e);
+    if (targetQq) e.at = targetQq;
+    const qq = targetQq || e.user_id || e.sender?.user_id || '';
+    const targetName = await resolveDisplayName(e, qq);
+    let targetUid = '';
+    try {
+      const user = await createUser(qq, e);
+      targetUid = String(user?.getUid?.('gs') || '');
+    } catch (_) {}
 
     let payload, data, monsters;
     try {
@@ -305,6 +281,7 @@ export class role_combat extends plugin {
     try {
       await prepareMysContext(e, 'gs');
       const mys = await MysApi.init(e, 'cookie');
+      if (mys?.uid) queryUserUid = String(mys.uid);
       if (mys && mys.uid && await mys.checkCk()) {
         // 以 mys.uid 为准，确保过滤与展示的是同一个人（@目标已通过 e.at 传入）
         const player = Player.create(e);
@@ -333,7 +310,7 @@ export class role_combat extends plugin {
         }));
         // 统一以 MysInfo 解析出的 uid 作为展示 uid，避免两条路径不一致
         queryUserUid = mys.uid;
-        if (!queryUserName) queryUserName = e.user?.nickname || '当前用户';
+        if (!queryUserName) queryUserName = String(qq);
       } else {
         // 有查询目标但拿不到可用 CK，无法读取角色列表
         ckMissing = true;
@@ -402,6 +379,7 @@ export class role_combat extends plugin {
       version: payload.version,
       fallback: payload.fallback,
       generatedAt: moment().format('MM-DD HH:mm'),
+      qq,
       queryUser: queryUserName,
       queryUid: queryUserUid,
       filterApplied,

@@ -258,7 +258,7 @@ export class abyssTeam extends plugin {
     if (!floorData) return e.reply('暂无可用的深渊配队数据，请稍后重试~')
 
     // 取本人练度（有 CK 更准；无 CK 用通用榜）
-    const { hasCk, avatarData } = await loadAvatarData(e, { talent: true, logTag: 'xhh][abyssTeam' })
+    const { hasCk, uid, avatarData } = await loadAvatarData(e, { talent: true, logTag: 'xhh][abyssTeam' })
 
     const { ret, avatarMap } = computeTeams([floorData], avatarData)
     const floors = buildFloors(ret, avatarMap)
@@ -279,6 +279,7 @@ export class abyssTeam extends plugin {
     const renderData = {
       qq,
       qqname,
+      uid,
       bgImage,
       theme,
       version,

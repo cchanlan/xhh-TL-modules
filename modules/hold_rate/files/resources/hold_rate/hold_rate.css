@@ -98,3 +98,7 @@ h1 { font-size: 40rem; line-height: 1.5; letter-spacing: 2rem; font-weight: 700;
 .empty-state { padding: 28rem 0; color: var(--secondary); text-align: center; font-size: 17rem; }
 .colophon { display: flex; align-items: center; justify-content: space-between; gap: 16rem; padding-top: 18rem; color: var(--secondary); font-size: 12rem; }
 .colophon > b { flex-shrink: 0; color: var(--accent); font-size: 14rem; font-weight: 700; }
+
+.account-copy { min-width: 0; }
+.account-copy .account-name { display: block; }
+.account-uid { display: block; color: var(--secondary); font-size: 13rem; margin-top: 2rem; overflow-wrap: anywhere; }

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<link rel="stylesheet" href="{{ppath}}role_combat/role_combat.css?v=20261122-panels-45-49" />
+<link rel="stylesheet" href="{{ppath}}role_combat/role_combat.css?v=20261122-account-identity" />
 <style>html { font-size: {{scalePx}}px; }</style>
 </head>
 <body class="theme-{{theme}}">
@@ -16,7 +16,7 @@
 <p class="kicker">IMAGINARIUM THEATER</p>
 <h1>幻想真境剧诗</h1>
 <p class="cover-subtitle">这一期，谁能登台？</p>
-<p class="identity">{{if filterApplied}}<strong>{{queryUser}}</strong><span>UID {{queryUid}}</span>{{else}}当期全部可用角色{{/if}}</p>
+<div class="identity"><img class="identity-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}" alt=""><div><strong class="identity-name">{{queryUser}}</strong><span class="identity-uid">UID {{queryUid || '未绑定'}}</span></div></div>{{if !filterApplied}}<p class="identity-mode">当期全部可用角色</p>{{/if}}
 </div>
 <div class="issue"><span class="issue-year">{{month.slice(0, 4)}} / 剧诗期次</span><b>{{month.slice(5)}}</b><span class="issue-month">{{month}}</span></div>
 </div>

@@ -104,3 +104,5 @@ h1 { font-size: 40rem; line-height: 1.5; font-weight: 700; letter-spacing: 2rem;
 .single-row .party { padding: 0 4rem; }
 .colophon { display: flex; align-items: center; justify-content: space-between; gap: 15rem; padding-top: 18rem; color: var(--secondary); font-size: 12rem; }
 .colophon > b { color: var(--accent); font-size: 14rem; font-weight: 700; flex-shrink: 0; }
+
+.account-uid { display: block; margin-top: 3rem; color: var(--secondary); font-size: 13rem; overflow-wrap: anywhere; }

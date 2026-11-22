@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><link rel="stylesheet" href="{{ppath}}hard_team/hard_team.css?v=20261122-tactics-board"><style>html { font-size: {{scalePx}}px; }</style></head>
+<head><meta charset="utf-8"><link rel="stylesheet" href="{{ppath}}hard_team/hard_team.css?v=20261122-account-identity"><style>html { font-size: {{scalePx}}px; }</style></head>
 <body class="theme-{{theme}}">
 <div class="stage" id="container" {{if bgImage}}style="background-image: url('{{bgImage}}');"{{/if}}>
 <main class="manual">
 <header class="masthead"><div class="brand-line"><span>小火花 <i>/</i> 原神配队手册</span><span>幽境危战 · 出场配队建议</span></div>
-<div class="cover"><div><p class="eyebrow">STYGIAN ONSLAUGHT / TEAM TACTICS</p><h1>危战配队</h1><p class="subtitle">三关强敌，逐区选队</p></div><div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}.jpg" alt=""><div><strong class="account-name">{{qqname}}</strong><span class="account-status">{{if hasCk}}已按本人练度排序{{else}}通用榜(未绑定CK){{/if}}</span></div></div></div>
+<div class="cover"><div><p class="eyebrow">STYGIAN ONSLAUGHT / TEAM TACTICS</p><h1>危战配队</h1><p class="subtitle">三关强敌，逐区选队</p></div><div class="account"><img class="account-avatar" src="https://q1.qlogo.cn/g?b=qq&s=640&nk={{qq}}" alt=""><div><strong class="account-name">{{qqname}}</strong><span class="account-uid">UID {{uid || '未绑定'}}</span><span class="account-status">{{if hasCk}}已按本人练度排序{{else}}通用榜(未绑定CK){{/if}}</span></div></div></div>
 <div class="metadata">{{if version}}<span class="version">版本 {{version}}</span>{{/if}}<span>获取 {{generatedAt}}</span>{{if lastUpdate}}<span>更新 {{lastUpdate}}</span>{{/if}}<span class="source">提瓦特小助手</span></div>
 </header>
 <section class="guide"><div class="guide-heading"><h2>配队说明</h2><span>4 人完整队 · 数据仅供参考</span></div><ul><li>数据来自<strong>提瓦特小助手</strong>，为其用户自主上传的幽境危战挑战记录统计</li>

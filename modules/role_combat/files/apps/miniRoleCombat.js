@@ -12,7 +12,7 @@ import { prepareMysContext } from '../utils/runtimePatch.js'
 import { config, pluginDir } from '../utils/pluginConfig.js'
 import { replyProgress } from '../utils/replyHelper.js'
 import { renderTpl } from '../utils/render.js'
-import { faceUrl, pickGsBgImage } from '../utils/gsHelper.js'
+import { faceUrl, pickGsBgImage, resolveTargetQq, resolveDisplayName } from '../utils/gsHelper.js'
 import { guardModule } from '../utils/modules.js'
 
 function intToRoman(num) {
@@ -37,17 +37,23 @@ function isKeyRound(round) {
 }
 
 
+function readTalent(value) {
+  const raw = value && typeof value === 'object' ? (value.level ?? value.original) : value
+  if (raw == null || raw === '' || raw === false) return ''
+  return Number.isFinite(Number(raw)) ? Number(raw) : ''
+}
+
 function resolveAvatarCard(avatar, avatarDataMap = {}) {
   const id = String(avatar.avatar_id || avatar.id || '')
-  const own = avatarDataMap[id] || avatarDataMap[Number(id)] || {}
+  const type = Number(avatar.avatar_type || 1)
+  const own = type === 1 ? (avatarDataMap[id] || avatarDataMap[Number(id)] || {}) : {}
   // 全名优先，避免奇怪 abbr
   let name = avatar.name || own.name || own.abbr || id
   let face = own.face || own.qFace || ''
-  let star = own.star || 4
-  let elem = own.elem || ''
+  let star = avatar.rarity || own.star || 4
+  let elem = String(avatar.element || own.elem || '').toLowerCase()
   let level = avatar.level || own.level || 0
   let cons = own.cons
-  const type = Number(avatar.avatar_type || 1)
   if (id) {
     try {
       const char = Character.get(Number(id)) || new Character({ id: Number(id), name: avatar.name })
@@ -86,20 +92,60 @@ function resolveAvatarCard(avatar, avatarDataMap = {}) {
   return {
     id,
     name,
-    face: faceUrl(face),
+    face: faceUrl(face || avatar.image || ''),
     star,
     elem,
     level,
-    cons: cons == null || cons === '' ? 0 : cons,
+    cons: cons == null || cons === '' ? null : cons,
     type,
     typeLabel,
+    detailSource: type === 1 ? (own.detailSource || 'missing') : 'report',
     weapon,
     artis,
     talent: {
-      a: own.talent?.a?.level ?? own.talent?.a?.original ?? '',
-      e: own.talent?.e?.level ?? own.talent?.e?.original ?? '',
-      q: own.talent?.q?.level ?? own.talent?.q?.original ?? '',
+      a: readTalent(own.talent?.a),
+      e: readTalent(own.talent?.e),
+      q: readTalent(own.talent?.q),
     },
+  }
+}
+
+/** Accept both legacy avatars and current list/base responses. */
+function normalizeCharacterResponse(response) {
+  if (!response || (response.retcode != null && Number(response.retcode) !== 0)) return []
+  const data = response.data && !response.avatars && !response.list ? response.data : response
+  const list = Array.isArray(data.avatars) ? data.avatars : Array.isArray(data.list) ? data.list : []
+  return list.filter(entry => entry && typeof entry === 'object').map(entry => ({ ...entry, ...(entry.base || {}) })).filter(entry => entry.id || entry.avatar_id)
+}
+
+function mergeCharacterData(map, entries, freshEquipment = false) {
+  for (const entry of entries) {
+    const id = String(entry.id || entry.avatar_id)
+    const old = map[id] || {}
+    const next = { ...old, name: entry.name || old.name, level: entry.level ?? old.level,
+      star: entry.rarity || entry.star || old.star,
+      elem: String(entry.element || old.elem || '').toLowerCase(),
+      cons: entry.actived_constellation_num ?? entry.cons ?? old.cons }
+    if (entry.weapon?.id || entry.weapon?.name) {
+      const weapon = entry.weapon
+      next.weapon = { ...weapon, star: weapon.rarity ?? weapon.star,
+        affix: weapon.affix_level ?? weapon.affix,
+        img: weapon.icon || weapon.img || (weapon.id === old.weapon?.id ? old.weapon.img : '') }
+    }
+    if (Array.isArray(entry.relics) && entry.relics.length) {
+      const sets = new Map()
+      for (const relic of entry.relics) {
+        const name = relic.set?.name || relic.set_name || ''
+        if (!name) continue
+        const set = sets.get(name) || { name, count: 0, img: relic.icon || relic.img || '' }
+        set.count++; sets.set(name, set)
+      }
+      const selected = [...sets.values()].sort((a, b) => b.count - a.count).slice(0, 2)
+      if (selected.length) next.artisSet = { names: selected.map(s => s.name), name: selected.map(s => s.name + '×' + s.count).join(' + '), imgs: selected.map(s => s.img).filter(Boolean) }
+    }
+    if (entry.talent) next.talent = entry.talent
+    next.detailSource = freshEquipment && (entry.weapon?.id || entry.weapon?.name || entry.relics?.length) ? 'fresh' : (old.detailSource || 'missing')
+    map[id] = next
   }
 }
 
@@ -197,31 +243,8 @@ export class miniRoleCombat extends plugin {
     const isCurrent = !(/上期/.test(rawMsg))
     const periodText = isCurrent ? '本期' : '上期'
 
-    // @ 他人
-    let targetQq = null
-    let targetName = null
-    const selfId = e.self_id || (e.bot || Bot)?.uin
-    for (const msg of e.message || []) {
-      if (msg.type === 'at' && String(msg.qq) !== String(selfId)) {
-        targetQq = msg.qq
-        break
-      }
-    }
-    if (targetQq) e.at = String(targetQq)
-
-    if (targetQq && e.group) {
-      try {
-        const member = e.group.pickMember?.(targetQq)
-        if (member?.card || member?.nickname) {
-          targetName = member.card || member.nickname
-        } else {
-          const bot = e.bot || Bot
-          const info = await bot.getGroupMemberInfo?.(String(e.group_id), String(targetQq))
-          if (info?.card || info?.nickname) targetName = info.card || info.nickname
-        }
-      } catch (_) {}
-      if (!targetName) targetName = String(targetQq)
-    }
+    const targetQq = resolveTargetQq(e)
+    if (targetQq) e.at = targetQq
 
     await replyProgress(e, `正在获取${periodText}小剧诗关键关卡…`)
 
@@ -238,27 +261,17 @@ export class miniRoleCombat extends plugin {
     const uid = mys.uid
     const player = Player.create(e)
 
-    let resRole
-    let resDetail
     let lvs
     try {
-      resRole = await mys.getRoleCombat(true)
+      const resRole = await mys.getRoleCombat(true)
       lvs = getVal(resRole, isCurrent ? 'data.0' : 'data.1')
       if (!lvs || !lvs.has_detail_data) {
         return e.reply(`暂未获得${periodText}幻想真境剧诗挑战数据…`)
       }
-      resDetail = await mys.getCharacter()
-      if (!resDetail?.avatars || resDetail.avatars.length <= 3) {
-        return e.reply('角色信息获取失败，请稍后重试')
-      }
-      delete resDetail._res
-      delete resRole._res
     } catch (err) {
       logger.error('[xhh][miniRoleCombat] 拉取剧诗失败:', err)
-      return e.reply(`获取失败，请稍后重试`)
+      return e.reply('幻想真境剧诗战报获取失败，请稍后重试')
     }
-
-    player.setMysCharData(resDetail)
 
     // 关键关卡用到的自有角色 id
     const needIds = []
@@ -272,50 +285,46 @@ export class miniRoleCombat extends plugin {
     }
     const uniqIds = lodash.uniq(needIds)
 
-    // 刷 mys 详情（武器/圣遗物）+ 天赋
-    try {
-      if (uniqIds.length) {
-        await player.refresh({ detail: 1, talent: 1, ids: uniqIds })
-      }
-    } catch (err) {
-      logger.debug('[xhh][miniRoleCombat] refresh detail 失败:', err?.message)
-      try { await player.refreshTalent(uniqIds) } catch (_) {}
-    }
-
     const avatarDataMap = {}
     try {
-      const ret = await player.refreshAndGetAvatarData({
-        ids: uniqIds,
-        detail: 0,
-        talent: 0,
-        rank: false,
-        materials: false,
-        retType: 'object',
-        sort: false,
-      }, 'gs')
-      if (ret && typeof ret === 'object') {
-        for (const [k, v] of Object.entries(ret)) avatarDataMap[String(k)] = v
+      const cached = player.getAvatarData(uniqIds) || {}
+      for (const [key, value] of Object.entries(cached)) {
+        if (value?.id) avatarDataMap[String(value.id || key)] = { ...value, detailSource: 'cached' }
       }
-    } catch (_) {
-      const ownAvatarData = player.getAvatarData(uniqIds) || {}
-      if (Array.isArray(ownAvatarData)) {
-        for (const a of ownAvatarData) avatarDataMap[String(a.id)] = a
-      } else {
-        for (const [k, v] of Object.entries(ownAvatarData)) avatarDataMap[String(k)] = v
-      }
+    } catch (err) {
+      logger.debug('[xhh][miniRoleCombat] 读取角色缓存失败:', err?.message)
     }
-
-    // 补全 artisSet
-    for (const id of uniqIds) {
-      const sid = String(id)
-      const cur = avatarDataMap[sid]
-      if (cur?.artisSet?.names?.length || cur?.artisSet?.imgs?.length) continue
-      try {
-        const av = player.getAvatar?.(id) || player.getAvatar?.(Number(id))
-        if (!av) continue
-        const ds = av.getDetail?.() || {}
-        avatarDataMap[sid] = { ...(cur || {}), ...ds }
-      } catch (_) {}
+    let detailUnavailable = false
+    let freshEquipment = false
+    try {
+      const response = await mys.getCharacter()
+      const entries = normalizeCharacterResponse(response)
+      if (!entries.length) {
+        detailUnavailable = true
+        logger.debug('[xhh][miniRoleCombat] 角色资料不可用，保留战报与缓存:', Number(response?.retcode || e._retcode || 0))
+      } else {
+        freshEquipment = entries.some(a => a.weapon?.id || a.weapon?.name || a.relics?.length)
+        mergeCharacterData(avatarDataMap, entries, freshEquipment)
+        if (!freshEquipment && uniqIds.length && typeof mys.getCharacterDetail === 'function') {
+          const detail = normalizeCharacterResponse(await mys.getCharacterDetail(uniqIds))
+          freshEquipment = detail.some(a => a.weapon?.id || a.weapon?.name || a.relics?.length)
+          mergeCharacterData(avatarDataMap, detail, freshEquipment)
+        }
+        detailUnavailable = !freshEquipment
+        // Talent refresh is independent of the full-list API; cached gear is never overwritten by an empty list.
+        if (freshEquipment && typeof player.refreshTalent === 'function') {
+          try {
+            await player.refreshTalent(uniqIds)
+            const current = player.getAvatarData(uniqIds) || {}
+            for (const value of Object.values(current)) {
+              if (value?.id && avatarDataMap[String(value.id)]) avatarDataMap[String(value.id)].talent = value.talent
+            }
+          } catch (err) { logger.debug('[xhh][miniRoleCombat] 天赋刷新跳过:', err?.message) }
+        }
+      }
+    } catch (err) {
+      detailUnavailable = true
+      logger.debug('[xhh][miniRoleCombat] 资料刷新失败，保留战报与缓存:', err?.message)
     }
 
     const stages = buildKeyStages(lvs, avatarDataMap)
@@ -335,7 +344,7 @@ export class miniRoleCombat extends plugin {
 
     const bgImage = pickGsBgImage('xhh-TL/miniRoleCombat')
     const qq = targetQq || e.user_id || e.sender?.user_id || ''
-    const qqname = targetName || e.sender?.card || e.sender?.nickname || String(qq)
+    const qqname = await resolveDisplayName(e, qq)
 
     const cfg = config()
     const themeRaw = String(cfg.role_combat_theme || cfg.gs_all_abyss_theme || 'light').toLowerCase()
@@ -344,6 +353,7 @@ export class miniRoleCombat extends plugin {
     const renderData = {
       theme,
       stages,
+      detailUnavailable,
       stageCount: stages.length,
       periodText,
       month,
