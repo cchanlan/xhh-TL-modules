@@ -1,6 +1,6 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 @font-face { font-family: 'JournalSans'; src: url('../font/NotoSansCJKsc-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
-body { --page: #ebf0f3; --ink: #142b36; --secondary: #304553; --accent: #124858; --rule: rgba(24,58,71,.22); --paper: rgba(255,255,255,.74); --panel: rgba(220,229,240,.45); --wash: rgba(246,249,251,.24); --notice: #674a20; width: 1000rem; color: var(--ink); background: var(--page); font: 15rem/1.5 'JournalSans','Microsoft YaHei',sans-serif; }
+body { --page: #f7f9fb; --ink: #142b36; --secondary: #304553; --accent: #124858; --rule: rgba(24,58,71,.22); --paper: rgba(255,255,255,.98); --panel: rgba(235,241,247,.92); --wash: rgba(255,255,255,0); --notice: #674a20; width: 1000rem; color: var(--ink); background: var(--page); font: 15rem/1.5 'JournalSans','Microsoft YaHei',sans-serif; }
 body.theme-dark { --page: #15242e; --ink: #f0f4f5; --secondary: #d4dfe4; --accent: #b1e3ed; --rule: rgba(207,233,239,.26); --paper: rgba(14,32,43,.80); --panel: rgba(40,51,72,.49); --wash: rgba(13,25,35,.24); --notice: #ffe4a8; }
 .stage { position: relative; width: 1000rem; min-height: 600rem; background: var(--page) center/cover no-repeat; border-radius: 24rem; overflow: hidden; }
 .stage::before { content: ''; position: absolute; inset: 0; background: var(--wash); pointer-events: none; }

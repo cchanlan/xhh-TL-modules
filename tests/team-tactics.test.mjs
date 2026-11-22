@@ -26,7 +26,7 @@ for(const id of ['abyss_team','hard_team']) {
  });
  test(id+' 保持验收圆角配色、背景边界及相对资源路径',()=>{
   const stage=css.match(/\.stage \{([^}]+)\}/)[1];assert.match(stage,/width: 1020rem/);assert.match(stage,/border-radius: 24rem/);assert.match(stage,/overflow: hidden/);assert.ok(!/padding:/.test(stage));
-  assert.match(css,/--panel:\s*rgba\(219, 229, 240, 0\.45\)/);assert.match(css,/--panel:\s*rgba\(44, 59, 79, 0\.49\)/);
+  assert.match(css,/--panel:\s*rgba\(235,241,247,\.92\)/);assert.match(css,/--panel:\s*rgba\(44, 59, 79, 0\.49\)/);
   assert.match(css,/\.tactics \{[^}]*border-radius: 18rem/);
   for(const cls of ['role','duo-row','single-row']){const rule=css.match(new RegExp('\\.'+cls+' \\{([^}]+)\\}'));if(rule)assert.ok(!/background:|border-radius:|box-shadow:/.test(rule[1]),cls);}
   assert.match(css,/url\('\.\.\/font\/NotoSansCJKsc-Regular\.ttf'\)/);assert.ok(html.includes('{{ppath}}'+id+'/'+id+'.css'));

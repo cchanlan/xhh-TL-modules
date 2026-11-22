@@ -4,7 +4,8 @@
   "description": "汇总星铁混沌回忆、虚构叙事、末日幻影与异相仲裁。",
   "coreApi": 2,
   "dependencies": [
-    "shared_account"
+    "shared_account",
+    "shared_fonts"
   ],
   "entries": [
     {
@@ -19,7 +20,8 @@
     "resources/all-abyss-mobile.html",
     "resources/all-abyss.html",
     "resources/background.png",
-    "apps/allAbyssModule.js"
+    "apps/allAbyssModule.js",
+    "resources/sr_all_abyss.css"
   ],
   "minCoreVersion": "2.1.0",
   "minNodeVersion": "18.17.0"

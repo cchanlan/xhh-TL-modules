@@ -4,7 +4,8 @@
   "description": "读取喵喵面板，计算队伍伤害并比较搭配。",
   "coreApi": 2,
   "dependencies": [
-    "shared_gs"
+    "shared_gs",
+    "shared_fonts"
   ],
   "entries": [
     {

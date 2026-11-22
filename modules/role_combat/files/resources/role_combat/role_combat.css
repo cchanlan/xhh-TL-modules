@@ -1,14 +1,14 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 @font-face { font-family: 'TheaterSans'; src: url('../font/NotoSansCJKsc-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
 body {
-  --page: #ebf0f3;
+  --page: #f7f9fb;
   --ink: #142b36;
   --secondary: #304553;
   --accent: #124858;
   --rule: rgba(24, 58, 71, 0.22);
-  --paper: rgba(255, 255, 255, 0.74);
-  --roster-tone: rgba(220, 229, 240, 0.45);
-  --wash: rgba(246, 249, 251, 0.24);
+  --paper: rgba(255,255,255,.98);
+  --roster-tone: rgba(235,241,247,.92);
+  --wash: rgba(255,255,255,0);
   --notice: #fff2ce;
   --notice-ink: #66491c;
   width: 860rem;

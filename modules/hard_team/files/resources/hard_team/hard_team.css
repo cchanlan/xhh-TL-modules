@@ -1,14 +1,14 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 @font-face { font-family: 'TacticsSans'; src: url('../font/NotoSansCJKsc-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
 body {
-  --canvas: #edf2f5;
+  --canvas: #f7f9fb;
   --ink: #172d3d;
   --secondary: #344957;
   --accent: #214f73;
   --rule: rgba(29, 55, 72, 0.16);
-  --paper: rgba(255, 255, 255, 0.78);
-  --wash: rgba(246, 249, 251, 0.24);
-  --panel: rgba(219, 229, 240, 0.45);
+  --paper: rgba(255,255,255,.98);
+  --wash: rgba(255,255,255,0);
+  --panel: rgba(235,241,247,.92);
   --up: #214f73;
   --mid: #624080;
   --down: #7d4324;

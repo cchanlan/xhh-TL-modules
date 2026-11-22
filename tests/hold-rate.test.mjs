@@ -33,7 +33,7 @@ test('无CK不标未持有，绘制条不更改原百分比且标尺一致',()=>
 });
 test('验收背景边界与圆角配色保持，角色无独立卡片',()=>{
  const stage=css.match(/\.stage \{([^}]+)\}/)[1];assert.match(stage,/width: 1020rem/);assert.match(stage,/border-radius: 24rem/);assert.match(stage,/overflow: hidden/);assert.ok(!/padding:/.test(stage));
- assert.match(css,/--panel:\s*rgba\(219, 229, 240, 0\.45\)/);assert.match(css,/--panel:\s*rgba\(44, 59, 79, 0\.49\)/);assert.match(css,/\.catalog-group \{[^}]*border-radius: 18rem/);
+ assert.match(css,/--panel:\s*rgba\(235,241,247,\.92\)/);assert.match(css,/--panel:\s*rgba\(44, 59, 79, 0\.49\)/);assert.match(css,/\.catalog-group \{[^}]*border-radius: 18rem/);
  const row=css.match(/\.ownership-row \{([^}]+)\}/)[1];assert.ok(!/background:|border-radius:|box-shadow:/.test(row));
 });
 test('持有率模板相对资源路径可分发，不含私有账号或绝对路径',()=>{

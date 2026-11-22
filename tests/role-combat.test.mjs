@@ -38,7 +38,7 @@ test('元素名册稳定分组且未知元素不会被静默丢弃',()=>{
  assert.match(html,/each members c/);
 });
 test('验收配色与圆角背景边界保持，条目不恢复小卡框',()=>{
- assert.match(css,/--roster-tone:\s*rgba\(220, 229, 240, 0\.45\)/);
+ assert.match(css,/--roster-tone:\s*rgba\(235,241,247,\.92\)/);
  assert.match(css,/--roster-tone:\s*rgba\(40, 51, 72, 0\.49\)/);
  for(const name of ['cast','encounter','roster']) assert.match(css,new RegExp('\\.'+name+'-chapter \\{ background: var\\(--roster-tone\\); \\}'));
  const stage=css.match(/\.stage \{([^}]+)\}/)[1];

@@ -438,10 +438,14 @@ export class teamDamage extends plugin {
     if (config().team_damage === false) return false
 
     const qq = e.user_id || ''
+    let uid = '';
+    try { uid = String((await createUser(qq, e))?.getUid?.('gs') || ''); } catch (_) {}
     const renderData = {
       ...HELP_DATA,
+      uid,
       qq,
       qqname: await resolveDisplayName(e, qq),
+      theme: String(config().gs_all_abyss_theme || 'light').toLowerCase() === 'dark' ? 'dark' : 'light',
       bgImage: toDataUrl(pickGsBgImage('xhh-TL/teamDamage')),
       fontPanel: toFileUrl(path.join(MIAO_RES, 'common/font/HYWH-65W.ttf')),
       fontNum: toFileUrl(path.join(MIAO_RES, 'common/font/tttgbnumber.ttf')),
@@ -614,6 +618,7 @@ export class teamDamage extends plugin {
       ...view,
       qq,
       qqname: await resolveDisplayName(e, qq),
+      theme: String(config().gs_all_abyss_theme || 'light').toLowerCase() === 'dark' ? 'dark' : 'light',
       detail,
       custom: !!custom?.length,
       modSummary,

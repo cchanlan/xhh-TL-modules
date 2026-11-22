@@ -585,6 +585,15 @@ export async function allAbyss(e) {
         return false;
       }
 
+      // Keep query account aligned with @ target, without altering event sender.
+      const selfId=String(e.self_id||e.bot?.uin||'');
+      const targetQq=String(e.at||'')!==selfId&&e.at?String(e.at):(e.message||[]).find(m=>m.type==='at'&&String(m.qq)!==selfId)?.qq;
+      if(targetQq)e.at=String(targetQq);
+      const qq=String(targetQq||e.user_id||'');
+      let qqname=qq===String(e.user_id)?(e.sender?.card||e.sender?.nickname||qq):qq;
+      if(targetQq&&e.group){try{const member=e.group.pickMember?.(targetQq);qqname=member?.card||member?.nickname||qqname;}catch(_){} }
+      if(targetQq&&qqname===qq){try{const bot=e.bot||(typeof Bot!=='undefined'?Bot:null);const info=await bot?.getGroupMemberInfo?.(String(e.group_id),qq);qqname=info?.card||info?.nickname||qqname;}catch(_){} }
+
       // 初始化 MysApi
       e.isSr = true;
       await prepareMysContext(e, 'sr');
@@ -696,6 +705,11 @@ export async function allAbyss(e) {
         BODY_PADDING + gridCols * TILE_WIDTH + Math.max(0, gridCols - 1) * TILE_GAP
       );
       const renderData = {
+        qq,
+        qqname,
+        theme:String(config().gs_all_abyss_theme||'light').toLowerCase()==='dark'?'dark':'light',
+        bgImage,
+        generatedAt:moment().format('MM-DD HH:mm'),
         chaosData,
         storyData,
         bossData,
