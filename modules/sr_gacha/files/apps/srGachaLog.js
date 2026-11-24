@@ -20,6 +20,8 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
+import md5 from 'md5'
 import moment from 'moment'
 import fetch from 'node-fetch'
 import plugin from '../../../lib/plugins/plugin.js'
@@ -233,7 +235,10 @@ async function badgeLogin(mysCookie, uid, region) {
     // -1002 米游社原话是「角色不存在或等级不符」，实测它同时对应「UID 不在本账号下」
     // 和「region 传错」两种，跟等级无关；抛原文会让人以为是等级不够
     if (json?.retcode === -1002) {
-      throw new Error(`米游社查不到 UID ${uid} 这个角色，确认下扫码登录的是这个号，或者 #刷新ck 后再试`)
+      throw gachaAuthError(`米游社查不到 UID ${uid} 这个角色，确认扫码登录的是对应账号，或发送【#刷新ck】后再试`)
+    }
+    if (json?.retcode === -100) {
+      throw gachaAuthError('抽卡登录凭证未被米游社认可，请发送【#扫码登录】后再更新抽卡记录')
     }
     throw new Error(`换取抽卡记录凭证失败：${json?.message || '接口无响应'}（${json?.retcode}）`)
   }
@@ -878,8 +883,71 @@ function guessSrRegion(uid) {
   }
 }
 
-/** stoken v2 换新鲜 cookie_token。走 passport-api（老的 api-takumi/auth 那个对 v2_ 开头的 stoken 会失败） */
+/** 只把可操作的鉴权错误直接回复给用户，网络堆栈和内部字段留在日志。 */
+function gachaAuthError(message) {
+  const error = new Error(message)
+  error.code = 'XHH_GACHA_AUTH'
+  return error
+}
+
+/** v2 stoken 使用同账号的通行证换票；旧接口可能成功返回一枚实际已失效的 cookie_token。 */
+async function exchangeCookieToken(stuid, stoken, mid) {
+  const body = JSON.stringify({ src_token: { token: stoken, token_type: 1 }, mid, dst_token_type: 4 })
+  const time = Math.floor(Date.now() / 1000)
+  const random = crypto.randomInt(100001, 200001)
+  const sign = md5(`salt=JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS&t=${time}&r=${random}&b=${body}&q=`)
+  let res, json
+  try {
+    res = await fetch('https://passport-api.mihoyo.com/account/ma-cn-session/app/exchange', {
+      method: 'POST',
+      headers: {
+        'x-rpc-app_id': 'bll8iq97cem8',
+        'x-rpc-device_id': crypto.randomUUID().replace(/-/g, '').toUpperCase(),
+        'x-rpc-device_name': 'Android',
+        'x-rpc-device_model': 'Android',
+        'x-rpc-device_fp': '38d7ee0e96649',
+        'x-rpc-app_version': '2.70.1',
+        'x-rpc-game_biz': 'bbs_cn',
+        'x-rpc-sys_version': '11',
+        'x-rpc-aigis': '',
+        'x-rpc-client_type': '2',
+        'x-rpc-sdk_version': '1.3.1.2',
+        'x-rpc-channel': 'appstore',
+        'User-Agent': 'okhttp/4.8.0',
+        'Content-Type': 'application/json;',
+        DS: `${time},${random},${sign}`,
+        Cookie: `stuid=${stuid};stoken=${stoken};mid=${mid};`,
+      },
+      body,
+      signal: AbortSignal.timeout(15000),
+    })
+    json = await res.json().catch(() => null)
+  } catch (err) {
+    // fetch 的异常可能含请求细节，不把它原样带给用户或写入换票日志。
+    logger?.debug?.(`[xhh-TL][抽卡记录] 通行证换票请求异常：${err?.name || 'Error'}`)
+    throw gachaAuthError('米游社抽卡登录请求超时或异常，请稍后重试')
+  }
+  if (!res.ok || json?.retcode !== 0) {
+    logger?.debug?.(`[xhh-TL][抽卡记录] 通行证换票失败：HTTP ${res.status}，retcode=${json?.retcode ?? 'unknown'}`)
+    if (json?.retcode === -100) {
+      throw gachaAuthError('米游社登录凭证已失效，请发送【#扫码登录】后再更新抽卡记录')
+    }
+    throw gachaAuthError('米游社抽卡登录暂时失败，请稍后重试；持续失败请发送【#扫码登录】重新登录')
+  }
+  const info = json.data?.user_info
+  const account = info?.aid || info?.uid || info?.account_id
+  const token = json.data?.token
+  if (token?.token_type !== 4 || typeof token.token !== 'string' ||
+      !token.token.trim() || ['null', 'undefined'].includes(token.token.trim()) ||
+      String(account || '') !== String(stuid) || (info?.mid && info.mid !== mid)) {
+    throw gachaAuthError('米游社登录凭证校验失败，请重新扫码登录后再更新抽卡记录')
+  }
+  return token.token
+}
+
+/** 完整 v2 凭据走通行证换票；旧 stoken / 缺 mid 的旧存档保留原兼容入口。 */
 async function fetchCookieToken(stuid, stoken, mid) {
+  if (String(stoken).startsWith('v2_') && mid) return exchangeCookieToken(stuid, stoken, mid)
   const res = await fetch(
     'https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken',
     {
@@ -893,7 +961,13 @@ async function fetchCookieToken(stuid, stoken, mid) {
   )
   const json = await res.json().catch(() => null)
   const ct = json?.data?.cookie_token
-  if (!ct) throw new Error(`换取 cookie_token 失败：${json?.message || '无响应'}（${json?.retcode}）`)
+  if (!res.ok || json?.retcode !== 0 || typeof ct !== 'string' || !ct.trim() ||
+      ['null', 'undefined'].includes(ct.trim())) {
+    throw gachaAuthError('米游社登录凭证获取失败，请稍后重试；持续失败请发送【#扫码登录】重新登录')
+  }
+  if (json.data?.uid != null && String(json.data.uid) !== String(stuid)) {
+    throw gachaAuthError('米游社登录凭证校验失败，请重新扫码登录后再更新抽卡记录')
+  }
   return ct
 }
 
@@ -935,7 +1009,9 @@ async function cookieFromEntry({ stuid, stoken, mid, raw }) {
     try {
       return `account_id=${stuid};cookie_token=${await fetchCookieToken(stuid, stoken, mid)}`
     } catch (err) {
-      logger?.debug?.(`[xhh-TL][抽卡记录] passport 换 cookie_token 失败：${err.message}`)
+      logger?.debug?.(`[xhh-TL][抽卡记录] 换取 cookie_token 失败：${err.message}`)
+      // 完整 v2 换票失败不能再拿旧接口/缓存中的坏票据冒充成功。
+      if (String(stoken).startsWith('v2_') && mid) throw err
     }
   }
   if (raw) {
@@ -957,7 +1033,7 @@ async function prepareCookie(e, uid, user, { allowFix = false } = {}) {
   // getstoken 返回的是 cookie 串（不是对象）
   const raw = await getstoken(e.user_id, uid, e)
   if (!raw) {
-    throw new Error('没找到可用的米游社凭证，请先扫码登录或 #绑定ck（需要 stoken）')
+    throw gachaAuthError('没找到可用的米游社登录凭证，请发送【#扫码登录】后再更新抽卡记录')
   }
   const src = typeof raw === 'string' ? raw : raw.ck_stoken || raw.ck || ''
   const yamlEntry = findStokenEntry(e.user_id, String(uid)) || {}
@@ -987,8 +1063,16 @@ async function prepareCookie(e, uid, user, { allowFix = false } = {}) {
   let firstCookie = ''
   let rolesOk = false // 至少有一枚凭证成功问出过角色列表
   const pool = [] // 这些凭证名下的星铁角色，用来纠正 UID 或在对不上时举例
+  let credentialError = null
   for (const c of cands) {
-    const cookie = await cookieFromEntry(c)
+    let cookie
+    try {
+      cookie = await cookieFromEntry(c)
+    } catch (err) {
+      if (err?.code === 'XHH_GACHA_AUTH') credentialError = err
+      logger?.debug?.(`[xhh-TL][抽卡记录] 候选账号换票失败：${err?.name || 'Error'}`)
+      continue
+    }
     if (!cookie) {
       logger?.debug?.(`[xhh-TL][抽卡记录] 凭证 ${c.stuid} 换不出 cookie_token，跳过`)
       continue
@@ -1007,7 +1091,8 @@ async function prepareCookie(e, uid, user, { allowFix = false } = {}) {
     }
   }
   if (!firstCookie) {
-    throw new Error('拿不到米游社凭证，stoken 可能已失效，重新扫码登录一次试试')
+    if (credentialError) throw credentialError
+    throw gachaAuthError('米游社登录凭证获取失败，请发送【#扫码登录】后再更新抽卡记录')
   }
   // 凭证是好的，但名下确实没有这个 UID —— 绑错号，或者把原神 UID 当成星铁 UID 绑了
   if (pool.length) {
@@ -1023,12 +1108,12 @@ async function prepareCookie(e, uid, user, { allowFix = false } = {}) {
       return { cookie: pick.cookie, region: pick.region || guessSrRegion(pick.uid), uid: pick.uid }
     }
     const list = [...new Set(pool.map(r => r.uid))].slice(0, 3).join('、')
-    throw new Error(`UID ${uid} 不在你登录的米游社账号下（这个号能查的是 ${list}），换成对应的号扫码登录再试`)
+    throw gachaAuthError(`UID ${uid} 不在你登录的米游社账号下（这个号能查的是 ${list}），换成对应的号扫码登录再试`)
   }
   if (rolesOk) {
     // 「角色列表通了但一个星铁角色都没有」这个形态没能在自己的号上实测过（名下都有角色），
     // 万一米游社在这种情况下回的不是 retcode=0 + 空列表，这里不触发、照旧走下面的号段兜底
-    throw new Error('你的米游社账号下没有崩铁角色，先在米游社里进一次崩铁再来更新')
+    throw gachaAuthError('你的米游社账号下没有崩铁角色，先在米游社里进一次崩铁再来更新')
   }
   // 角色列表接口没给结果：退回老办法，region 按绑定信息 / 号段推断，成不成交给下一步
   const candidates = [
@@ -1904,9 +1989,12 @@ export class srGachaLog extends plugin {
       await this.renderAll(realUid)
     } catch (err) {
       logger?.error?.(`[xhh-TL][抽卡记录] ${uid} 更新失败：${err.stack || err.message}`)
-      await this.reply(force
-        ? (rebuilt ? '记录已重建，请发 *全部记录 查看' : '强制更新失败，旧记录已保留，请稍后再发 *强制更新记录')
-        : '崩铁抽卡记录更新失败，请稍后重试', false, { at: true })
+      const message = err?.code === 'XHH_GACHA_AUTH'
+        ? `${force && !rebuilt ? '强制更新失败，旧记录已保留\n' : ''}${err.message}`
+        : (force
+          ? (rebuilt ? '记录已重建，请发 *全部记录 查看' : '强制更新失败，旧记录已保留，请稍后再发 *强制更新记录')
+          : '崩铁抽卡记录更新失败，请稍后重试')
+      await this.reply(message, false, { at: true })
     }
     return true
   }
