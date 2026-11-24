@@ -1,221 +1,266 @@
 /**
- * ck 失效自愈：全局运行时补丁
- *
- * 背景：全云崽的米游社请求判「ck 失效」都收口在 genshin 官方插件的
- * MysInfo.prototype.checkCode——命中 [-1,-100,1001,10001,10103] 且 message 含
- * 「登录/login」时，会弹「UID:xxx，米游社Cookie已失效」并 delCk() 硬删凭证。
- *
- * 本补丁在 xhh-TL 加载时包一层 checkCode：ck 失效那一刻，用 stoken 内部换出新 ck、
- * 换进当前 mysApi、写回 genshin 库、重发一次请求，用户全程无感。
- * stoken 已被米游社判死（换不出）时不再弹含糊的「Cookie已失效」，而是清掉凭证、
- * 直接让用户重新扫码。
- *
- * 只 patch 一个方法、只在「自己的 ck 且交互请求」时介入，不碰 genshin 源码。
+ * CK 失效自愈：只在自有插件安装运行时补丁，不修改 genshin / miao 源码。
+ * genshin.checkCode 与 miao.checkCk 是两条独立入口；均换取同账号的新 CK、
+ * 重试一次且校验通过后再持久化。传输失败或未确认的坏票据不清理绑定。
  */
-
 import fs from 'fs'
 import path from 'path'
 import YAML from 'yaml'
-import { refreshCkDetailed as realRefreshCk } from './auth.js'
+import fetch from 'node-fetch'
+import { refreshCkDetailed as realRefreshCk, cookiePart } from './auth.js'
 import { getStokenCandidateFiles } from './pluginConfig.js'
 
 const CK_DEAD_CODES = [-1, -100, 1001, 10001, 10103]
 const PATCH_FLAG = '__xhhCkAutoRefresh'
-// apiSync 批量接口里多个结果都用旧 ck 拉的，healing 第一个后循环里后续 sibling
-// 仍 dead 会各自再调一次换 ck。短缓存让同一 qq:uid 在窗口内复用上次换好的 ck，
-// 只让第一个 sibling 真打兑换接口——省接口调用、对米游社风控友好。
+const MIAO_PATCH_FLAG = '__xhhMiaoCkAutoRefresh'
 const CK_CACHE_TTL = 60 * 1000
-const ckCache = new Map() // `${qq}:${uid}` -> { ck, at }
+const ckCache = new Map()
+const refreshing = new Map()
+// apiSync 的并行结果可能仍来自旧 CK；记录响应实际使用的凭据，不能用后来已换新的 api.cookie 误判缓存又失效。
+const responseCookies = new WeakMap()
+const API_PATCH_FLAG = '__xhhCkRequestCookie'
+
+export function installMysApiCookieTracking(MysApi) {
+  if (!MysApi?.prototype || MysApi.prototype[API_PATCH_FLAG] || typeof MysApi.prototype.getData !== 'function') return false
+  const original = MysApi.prototype.getData
+  MysApi.prototype.getData = async function (...args) {
+    const cookie = this.cookie || ''
+    const result = await original.apply(this, args)
+    if (result && typeof result === 'object') responseCookies.set(result, cookie)
+    return result
+  }
+  MysApi.prototype[API_PATCH_FLAG] = true
+  return true
+}
 
 function isCkDead(res) {
-  return (
-    !!res &&
-    CK_DEAD_CODES.includes(Number(res.retcode)) &&
-    /(登录|login)/i.test(res.message || '')
-  )
+  return !!res && CK_DEAD_CODES.includes(Number(res.retcode)) && /(登录|login)/i.test(res.message || '')
 }
-
-async function cachedRefreshCk(refreshFn, qq, uid) {
-  const key = `${qq}:${uid}`
+function refreshKey(qq, uid, accountId = '') {
+  return `${qq}:${accountId ? `account:${accountId}` : `uid:${uid}`}`
+}
+function invalidateRefresh(qq, uid, accountId, ck) {
+  const key = refreshKey(qq, uid, accountId)
+  if (!ck || ckCache.get(key)?.ck === ck) ckCache.delete(key)
+}
+async function cachedRefreshCk(refreshFn, qq, uid, { accountId = '', rejectedCk = '' } = {}) {
+  const key = refreshKey(qq, uid, accountId)
   const hit = ckCache.get(key)
-  if (hit && Date.now() - hit.at < CK_CACHE_TTL) {
-    return { ck: hit.ck, stokenDead: false }
-  }
-  const r = await refreshFn(qq, uid)
-  const out = r && typeof r === 'object' ? r : { ck: r || '', stokenDead: false }
-  if (out.ck) ckCache.set(key, { ck: out.ck, at: Date.now() })
-  return out
+  if (hit && Date.now() - hit.at < CK_CACHE_TTL && hit.ck !== rejectedCk) return { ck: hit.ck, stokenDead: false }
+  ckCache.delete(key)
+  if (refreshing.has(key)) return refreshing.get(key)
+  const pending = (async () => {
+    const result = await refreshFn(qq, uid, { accountId })
+    const out = result && typeof result === 'object' ? result : { ck: result || '', stokenDead: false }
+    const actualAccount = cookiePart(out.ck || '', 'account_id') || cookiePart(out.ck || '', 'ltuid')
+    if (out.ck && accountId && actualAccount !== String(accountId)) return { ck: '', stokenDead: false }
+    if (out.ck && out.ck !== rejectedCk) {
+      ckCache.set(key, { ck: out.ck, at: Date.now() })
+      return out
+    }
+    return { ...out, ck: '' }
+  })()
+  refreshing.set(key, pending)
+  try { return await pending } finally { if (refreshing.get(key) === pending) refreshing.delete(key) }
 }
-
-/**
- * 把新 ck 写回 genshin 库，让下次请求不再失效。全程 try/catch，绝不抛：
- * 写回失败只是「这次换成功但没持久化」，不影响本次 swap+重发。
- * 每步做方法存在性检查，genshin 版本漂移不崩。
- */
+function accountOf(context) {
+  const ck = context.ckUser?.ck || context.ckInfo?.ck || ''
+  return String(context.ckUser?.ltuid || context.ckInfo?.ltuid || cookiePart(ck, 'account_id') || cookiePart(ck, 'ltuid') || '')
+}
 async function writeBackCk(ckUser, newCk) {
+  if (!ckUser) return false
   try {
-    if (!ckUser || typeof ckUser.setCkData !== 'function') return
-    ckUser.setCkData({ ck: newCk, device: ckUser.device })
+    if (typeof ckUser.setCkData === 'function') ckUser.setCkData({ ck: newCk, device: ckUser.device })
+    else ckUser.ck = newCk
     if (typeof ckUser.save === 'function') await ckUser.save()
     if (typeof ckUser.initCache === 'function') await ckUser.initCache()
+    return true
   } catch (err) {
-    logger?.debug?.(`[xhh-TL][ckAutoRefresh] writeBack failed: ${err?.message}`)
+    globalThis.logger?.debug?.(`[xhh-TL][ckAutoRefresh] 写回凭据失败：${err?.name || 'Error'}`)
+    return false
   }
 }
+function syncCookie(context, newCk) {
+  if (context.ckInfo) context.ckInfo.ck = newCk
+  if (context.mysInfo?.ckInfo) context.mysInfo.ckInfo.ck = newCk
+  for (const api of [context.mys, context.mysApi]) {
+    if (api && typeof api.getData === 'function') api.cookie = newCk
+  }
+}
+async function refreshUnavailable(context) {
+  await context.e?.reply?.(`UID:${context.ckInfo?.uid || context.uid}，米游社登录暂时无法自动刷新，请稍后重试；持续失败请发送 #扫码登录`)
+  return false
+}
 
-/**
- * 清掉所有候选 stoken 文件里该账号的凭证字段，强制用户重新扫码。
- * 只删凭证字段，保留 is_sign / region 这类用户偏好。
- */
-export function clearDeadStoken(qq, uid) {
+/** 确认根凭据失效后，只清理本 QQ 对应账号的凭据，不随便选第一个账号。 */
+export function clearDeadStoken(qq, uid, { accountId = '' } = {}) {
   for (const file of getStokenCandidateFiles(String(qq))) {
     try {
       if (!fs.existsSync(file)) continue
       const data = YAML.parse(fs.readFileSync(file, 'utf8')) || {}
-      const entry =
-        data[uid] ||
-        data[String(uid)] ||
-        Object.values(data).find((v) => v && (v.stoken || v.ck_stoken))
-      if (!entry) continue
-      for (const key of ['stoken', 'ck_stoken', 'cookie_token', 'ltoken']) {
-        delete entry[key]
-      }
-      fs.writeFileSync(file, YAML.stringify(data))
-    } catch (err) {
-      logger?.debug?.(`[xhh-TL][ckAutoRefresh] clear stoken failed: ${err?.message}`)
-    }
-  }
-}
-
-/**
- * JiuLi 把 ck 存在 data/db/data.db（Users.ltuids / MysUsers），genshin 的 delCk()
- * 在这套存储上删不干净：实测失效后记录仍留在库里，兼容层会把死 ck 重新导出成
- * data/MysCookie/<qq>.yaml，重启迁移又灌回去。这里按 uid 直接补删；
- * 其他框架没有这个库，静默跳过。
- */
-export async function clearDeadDb(qq, uid) {
-  try {
-    const file = path.join(process.cwd(), 'data/db/data.db')
-    if (!fs.existsSync(file)) return
-    const { DatabaseSync } = await import('node:sqlite')
-    const db = new DatabaseSync(file, { timeout: 5000 })
-    try {
-      const rows = db.prepare('SELECT ltuid, uids FROM MysUsers').all()
-      const dead = new Set()
-      for (const row of rows) {
-        let uids = {}
-        try {
-          uids = JSON.parse(row.uids || '{}') || {}
-        } catch (_) {}
-        const hit = Object.values(uids).some(
-          (list) => Array.isArray(list) && list.map(String).includes(String(uid)),
-        )
-        if (hit) dead.add(String(row.ltuid))
-      }
-      if (!dead.size) return
-      for (const ltuid of dead) {
-        db.prepare('DELETE FROM MysUsers WHERE ltuid = ?').run(ltuid)
-      }
-      for (const user of db.prepare('SELECT id, ltuids FROM Users').all()) {
-        const raw = String(user.ltuids || '')
-        const keep = raw.split(',').filter((v) => v && !dead.has(v))
-        if (keep.join(',') !== raw) {
-          db.prepare('UPDATE Users SET ltuids = ? WHERE id = ?').run(keep.join(','), user.id)
+      let changed = false
+      for (const [key, entry] of Object.entries(data)) {
+        if (!entry || typeof entry !== 'object') continue
+        const raw = entry.ck_stoken || entry.ck || entry.cookie || ''
+        const account = String(entry.stuid || cookiePart(raw, 'stuid') || cookiePart(raw, 'account_id') || cookiePart(raw, 'ltuid') || '')
+        if (accountId ? account !== String(accountId) : key !== String(uid) && String(entry.uid || '') !== String(uid)) continue
+        for (const field of ['stoken', 'ck_stoken', 'cookie_token', 'ltoken', 'ck', 'cookie']) {
+          if (Object.hasOwn(entry, field)) { delete entry[field]; changed = true }
         }
       }
-      logger?.mark?.(
-        `[xhh-TL][ckAutoRefresh] 已清理数据库死 ck [uid:${uid}][qq:${qq}]`,
-      )
-    } finally {
-      db.close()
+      if (changed) fs.writeFileSync(file, YAML.stringify(data))
+    } catch (err) {
+      globalThis.logger?.debug?.(`[xhh-TL][ckAutoRefresh] 清理凭据失败：${err?.name || 'Error'}`)
     }
-  } catch (err) {
-    logger?.debug?.(`[xhh-TL][ckAutoRefresh] clear db failed: ${err?.message}`)
   }
 }
 
-/**
- * 给 MysInfo 打补丁（依赖注入 refreshCk / clearStoken / clearDb，便于脱机测试）。
- * @returns {boolean} 是否成功安装（已装过 / 无原型返回 false）
- */
-export function installCkAutoRefresh(
-  MysInfo,
-  { refreshCk, clearStoken = clearDeadStoken, clearDb = clearDeadDb } = {},
-) {
-  if (!MysInfo?.prototype || MysInfo.prototype[PATCH_FLAG]) return false
+/** JiuLi 存储适配：只解绑请求用户拥有的失效账号，共享给其他用户的记录不删。 */
+export async function clearDeadDb(qq, uid, { accountId = '' } = {}) {
+  const file = path.join(process.cwd(), 'data/db/data.db')
+  if (!fs.existsSync(file)) return
+  let db
+  try {
+    const { DatabaseSync } = await import('node:sqlite')
+    db = new DatabaseSync(file, { timeout: 5000 })
+    db.exec('BEGIN IMMEDIATE')
+    const user = db.prepare('SELECT ltuids FROM Users WHERE id = ?').get(String(qq))
+    const owned = String(user?.ltuids || '').split(',').filter(Boolean)
+    const dead = new Set()
+    for (const id of owned) {
+      if (accountId && id !== String(accountId)) continue
+      const row = db.prepare('SELECT uids FROM MysUsers WHERE ltuid = ?').get(id)
+      let uids = {}
+      try { uids = JSON.parse(row?.uids || '{}') || {} } catch (_) {}
+      if (Object.values(uids).some(list => Array.isArray(list) && list.map(String).includes(String(uid)))) dead.add(id)
+    }
+    if (dead.size) {
+      db.prepare('UPDATE Users SET ltuids = ? WHERE id = ?').run(owned.filter(id => !dead.has(id)).join(','), String(qq))
+      const users = db.prepare('SELECT ltuids FROM Users').all()
+      for (const id of dead) {
+        if (!users.some(row => String(row.ltuids || '').split(',').includes(id))) db.prepare('DELETE FROM MysUsers WHERE ltuid = ?').run(id)
+      }
+    }
+    db.exec('COMMIT')
+  } catch (err) {
+    try { db?.exec('ROLLBACK') } catch (_) {}
+    globalThis.logger?.debug?.(`[xhh-TL][ckAutoRefresh] 清理数据库凭据失败：${err?.name || 'Error'}`)
+  } finally { db?.close() }
+}
+
+/** genshin 的请求错误收口。一次请求至多换票/重试一次，不递归进入包装层。 */
+export function installCkAutoRefresh(MysInfo, { refreshCk, clearStoken = clearDeadStoken, clearDb = clearDeadDb } = {}) {
+  if (!MysInfo?.prototype || MysInfo.prototype[PATCH_FLAG] || typeof MysInfo.prototype.checkCode !== 'function') return false
   const doRefresh = refreshCk || realRefreshCk
   const original = MysInfo.prototype.checkCode
-
-  MysInfo.prototype.checkCode = async function (
-    res,
-    type,
-    mysApi = {},
-    data = {},
-    isTask = false,
-  ) {
-    // 仅「交互请求 + 自己的 ck 失效 + 有可重发的 mysApi」才介入。
-    // 公共 ck（ckInfo.uid 空）、定时任务（isTask）、其他 retcode 一律不碰。
-    if (
-      !isTask &&
-      isCkDead(res) &&
-      this.ckInfo?.uid &&
-      mysApi &&
-      typeof mysApi.getData === 'function'
-    ) {
-      try {
-        const { ck: newCk, stokenDead } = await cachedRefreshCk(
-          doRefresh,
-          this.userId,
-          this.ckInfo.uid,
-        )
-        if (newCk) {
-          logger?.mark?.(
-            `[xhh-TL][ckAutoRefresh] 自动换 ck 重试 [uid:${this.ckInfo.uid}][qq:${this.userId}]`,
-          )
-          mysApi.cookie = newCk // 换请求 ck（mysApi.getData 用 this.cookie）
-          await writeBackCk(this.ckUser, newCk) // 持久化（best-effort，失败不阻塞）
-          const retryRes = await mysApi.getData(type, data)
-          // 重发结果交回*原始* checkCode 判：重发成功 → retcode 0 正常返回；
-          // 重发仍失败 → 走 genshin 原生 delCk+提示（自然降级）。
-          // 绝不再经过本包装层，杜绝二次换 ck / 死循环。
-          return await original.call(this, retryRes, type, mysApi, data, isTask)
-        }
-        if (stokenDead) {
-          // stoken 都死了，再刷新多少次都是空跑：清凭证，让用户重新扫码。
-          logger?.mark?.(
-            `[xhh-TL][ckAutoRefresh] stoken 已失效，清理凭证 [uid:${this.ckInfo.uid}][qq:${this.userId}]`,
-          )
-          try {
-            await this.delCk?.()
-          } catch (_) {}
-          clearStoken(this.userId, this.ckInfo.uid)
-          await clearDb(this.userId, this.ckInfo.uid)
-          this.e?.reply?.(
-            `UID:${this.ckInfo.uid}，授权已过期，请发送 #扫码登录 重新绑定`,
-          )
-          return false
-        }
-      } catch (err) {
-        logger?.debug?.(`[xhh-TL][ckAutoRefresh] swap failed: ${err?.message}`)
-        // 落到下面走原逻辑
-      }
+  MysInfo.prototype.checkCode = async function (res, type, mysApi = {}, data = {}, isTask = false) {
+    if (isTask || !isCkDead(res) || !this.ckInfo?.uid || typeof mysApi?.getData !== 'function' || this.ckUser?.type === 'hoyolab') {
+      return original.call(this, res, type, mysApi, data, isTask)
     }
-    return await original.call(this, res, type, mysApi, data, isTask)
+    const qq = this.userId, uid = this.ckInfo.uid, accountId = accountOf(this)
+    try {
+      const { ck: newCk, stokenDead } = await cachedRefreshCk(doRefresh, qq, uid, { accountId, rejectedCk: responseCookies.get(res) || mysApi.cookie || this.ckUser?.ck || '' })
+      if (newCk) {
+        const retryApi = Object.create(mysApi)
+        retryApi.cookie = newCk
+        const retryRes = await retryApi.getData(type, data)
+        if (isCkDead(retryRes)) {
+          invalidateRefresh(qq, uid, accountId, newCk)
+          return refreshUnavailable(this)
+        }
+        if (Number(retryRes?.retcode) === 0) {
+          mysApi.cookie = newCk
+          await writeBackCk(this.ckUser, newCk)
+          syncCookie(this, newCk)
+          globalThis.logger?.mark?.(`[xhh-TL][ckAutoRefresh] 自动刷新并重试成功 [uid:${uid}][qq:${qq}]`)
+        } else invalidateRefresh(qq, uid, accountId, newCk)
+        return original.call(this, retryRes, type, retryApi, data, isTask)
+      }
+      if (stokenDead) {
+        // 不调可能全局删除共享账号的 delCk；按当前用户/账号精确清理。
+        if (accountId) {
+          await clearStoken(qq, uid, { accountId })
+          await clearDb(qq, uid, { accountId })
+        }
+        await this.e?.reply?.(`UID:${uid}，授权已过期，请发送 #扫码登录 重新绑定`)
+        return false
+      }
+      return refreshUnavailable(this)
+    } catch (err) {
+      invalidateRefresh(qq, uid, accountId)
+      globalThis.logger?.debug?.(`[xhh-TL][ckAutoRefresh] 自动刷新异常：${err?.name || 'Error'}`)
+      return refreshUnavailable(this)
+    }
   }
-
   MysInfo.prototype[PATCH_FLAG] = true
   return true
 }
 
-// ---- 顶层 wiring：加载即执行一次；genshin 没装就静默跳过 ----
-try {
-  const mod = await import('../../genshin/model/mys/mysInfo.js')
-  const MysInfo = mod?.default
-  if (MysInfo && installCkAutoRefresh(MysInfo, { refreshCk: realRefreshCk })) {
-    logger?.info?.('[xhh-TL] ck 失效自愈补丁已装载')
-  }
-} catch (err) {
-  logger?.debug?.(`[xhh-TL][ckAutoRefresh] genshin 缺席，跳过: ${err?.message}`)
+async function inspectCookie(cookie) {
+  try {
+    const res = await fetch('https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie', {
+      headers: { Cookie: cookie }, signal: AbortSignal.timeout(10000),
+    })
+    return res.ok ? await res.json().catch(() => null) : null
+  } catch (_) { return null }
 }
 
-export default { installCkAutoRefresh }
+/** 喵喵的面板/深渊/剧诗等入口直接 checkCk，不经过 genshin.checkCode。 */
+export function installMiaoCkAutoRefresh(MysApi, { refreshCk, checkCookie = inspectCookie } = {}) {
+  if (!MysApi?.prototype || MysApi.prototype[MIAO_PATCH_FLAG] || typeof MysApi.prototype.checkCk !== 'function') return false
+  const original = MysApi.prototype.checkCk, doRefresh = refreshCk || realRefreshCk
+  MysApi.prototype.checkCk = async function (...args) {
+    let result
+    try { result = await original.apply(this, args) } catch (_) { return false }
+    if (result) return result
+    if (!this.e?.user_id || this.e.isTask || this.e.is_task || !this.ckInfo?.uid || !this.ckUser?.ck || this.ckUser.type === 'hoyolab') return result
+    const qq = String(this.e.user_id), uid = String(this.ckInfo.uid), accountId = accountOf(this)
+    if (!accountId) return result
+    const rejectedCk = this.ckUser.ck
+    try {
+      // 原方法只回布尔值，先确认失败确实是登录失效，不能因网络故障刷新/删除绑定。
+      const status = await checkCookie(rejectedCk)
+      if (Number(status?.retcode) === 0) return true
+      if (!isCkDead(status)) return result
+      const { ck: newCk } = await cachedRefreshCk(doRefresh, qq, uid, { accountId, rejectedCk })
+      if (!newCk) return result
+      // 在独立接收者上复验，坏票据不能先覆盖共享 CK 对象或数据库。
+      const probe = Object.create(this)
+      probe.ckUser = Object.assign(Object.create(Object.getPrototypeOf(this.ckUser)), this.ckUser, { ck: newCk })
+      probe.ckInfo = { ...this.ckInfo, ck: newCk }
+      if (!await original.apply(probe, args)) {
+        invalidateRefresh(qq, uid, accountId, newCk)
+        return false
+      }
+      await writeBackCk(this.ckUser, newCk)
+      syncCookie(this, newCk)
+      globalThis.logger?.mark?.(`[xhh-TL][ckAutoRefresh] 喵喵自动刷新并校验成功 [uid:${uid}][qq:${qq}]`)
+      return true
+    } catch (err) {
+      invalidateRefresh(qq, uid, accountId)
+      globalThis.logger?.debug?.(`[xhh-TL][ckAutoRefresh] 喵喵自动刷新异常：${err?.name || 'Error'}`)
+      return false
+    }
+  }
+  MysApi.prototype[MIAO_PATCH_FLAG] = true
+  return true
+}
+
+// genshin 可独立存在；喵喵异步挂接，避免它的模型索引循环依赖阻塞插件启动。
+try {
+  const mod = await import('../../genshin/model/mys/mysInfo.js')
+  const api = await import('../../genshin/model/mys/mysApi.js')
+  installMysApiCookieTracking(api?.default)
+  if (installCkAutoRefresh(mod?.default)) globalThis.logger?.info?.('[xhh-TL] ck 失效自愈补丁已装载')
+} catch (err) {
+  globalThis.logger?.debug?.(`[xhh-TL][ckAutoRefresh] genshin 未就绪，跳过：${err?.name || 'Error'}`)
+}
+void (async () => {
+  try {
+    const mod = await import('../../miao-plugin/models/MysApi.js')
+    if (installMiaoCkAutoRefresh(mod?.default)) globalThis.logger?.info?.('[xhh-TL] 喵喵 ck 失效自愈补丁已装载')
+  } catch (err) {
+    globalThis.logger?.debug?.(`[xhh-TL][ckAutoRefresh] 喵喵未就绪，跳过：${err?.name || 'Error'}`)
+  }
+})()
+export default { installCkAutoRefresh, installMiaoCkAutoRefresh, installMysApiCookieTracking }

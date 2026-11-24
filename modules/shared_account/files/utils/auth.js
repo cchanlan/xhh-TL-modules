@@ -42,24 +42,64 @@ function makeAppDs(query = '') {
  * 同时报告 stoken 是否已被米游社判死：只有明确回「登录状态失效」才算，
  * 网络错误不升级成 dead，免得一次抖动就清掉用户凭证。
  */
-export async function stokenToCookieDetailed(entry) {
+function accountIdOf(entry = {}) {
+  const ck = entry.ck_stoken || entry.ck || entry.cookie || ''
+  return String(entry.stuid || cookiePart(ck, 'stuid') || cookiePart(ck, 'ltuid') || cookiePart(ck, 'account_id') || '')
+}
+
+/** v2 stoken 的同账号通行证换票；传输/格式错误不能据此判定长期凭证失效。 */
+async function exchangeStoken(stuid, stoken, mid) {
+  const body = JSON.stringify({ src_token: { token: stoken, token_type: 1 }, mid, dst_token_type: 4 })
+  const t = Math.floor(Date.now() / 1000), r = crypto.randomInt(100001, 200001)
+  const sign = md5(`salt=JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS&t=${t}&r=${r}&b=${body}&q=`)
+  const unknown = { ck: '', stokenDead: false }
+  try {
+    const res = await fetch('https://passport-api.mihoyo.com/account/ma-cn-session/app/exchange', {
+      method: 'POST', body, signal: AbortSignal.timeout(12000),
+      headers: {
+        Cookie: `stuid=${stuid};stoken=${stoken};mid=${mid};`,
+        'x-rpc-app_id': 'bll8iq97cem8', 'x-rpc-device_id': crypto.randomUUID().replace(/-/g, '').toUpperCase(),
+        'x-rpc-device_name': 'Android', 'x-rpc-device_model': 'Android', 'x-rpc-device_fp': '38d7ee0e96649',
+        'x-rpc-app_version': '2.70.1', 'x-rpc-game_biz': 'bbs_cn', 'x-rpc-sys_version': '11',
+        'x-rpc-aigis': '', 'x-rpc-client_type': '2', 'x-rpc-sdk_version': '1.3.1.2', 'x-rpc-channel': 'appstore',
+        'User-Agent': 'okhttp/4.8.0', 'Content-Type': 'application/json;', DS: `${t},${r},${sign}`,
+      },
+    })
+    const json = await res.json().catch(() => null)
+    if (!res.ok || json?.retcode !== 0) {
+      return { ck: '', stokenDead: !!res.ok && json?.retcode === -100 && /(登录|login|过期|失效)/i.test(json?.message || '') }
+    }
+    const info = json.data?.user_info, token = json.data?.token
+    const account = info?.aid || info?.uid || info?.account_id
+    if (token?.token_type !== 4 || typeof token.token !== 'string' || !token.token.trim() ||
+        ['null', 'undefined'].includes(token.token.trim()) || String(account || '') !== String(stuid) ||
+        (info?.mid && info.mid !== mid)) return unknown
+    return { ck: `cookie_token=${token.token};account_id=${stuid};ltuid=${stuid};`, stokenDead: false }
+  } catch (err) {
+    globalThis.logger?.debug?.(`[xhh-TL][auth] 通行证换票请求异常：${err?.name || 'Error'}`)
+    return unknown
+  }
+}
+
+export async function stokenToCookieDetailed(entry, { forceRefresh = false } = {}) {
   const alive = (ck) => ({ ck, stokenDead: false })
   if (!entry) return alive('')
-  if (entry.ck && /cookie_token/.test(entry.ck)) return alive(entry.ck)
-  if (entry.cookie && /cookie_token/.test(entry.cookie)) return alive(entry.cookie)
+  if (!forceRefresh && entry.ck && /cookie_token/.test(entry.ck)) return alive(entry.ck)
+  if (!forceRefresh && entry.cookie && /cookie_token/.test(entry.cookie)) return alive(entry.cookie)
 
-  const stuid =
-    entry.stuid ||
-    cookiePart(entry.ck_stoken || '', 'stuid') ||
-    cookiePart(entry.ck_stoken || '', 'ltuid')
-  const stoken = entry.stoken || cookiePart(entry.ck_stoken || '', 'stoken')
-  const mid = entry.mid || cookiePart(entry.ck_stoken || '', 'mid')
+  const raw = entry.ck_stoken || entry.ck || entry.cookie || ''
+  const stuid = accountIdOf(entry)
+  const stoken = entry.stoken || cookiePart(raw, 'stoken')
+  const mid = entry.mid || cookiePart(raw, 'mid')
   if (!stuid || !stoken) {
+    if (forceRefresh) return alive('')
     if (entry.ltoken && entry.cookie_token) {
       return alive(`ltoken=${entry.ltoken};ltuid=${stuid || ''};cookie_token=${entry.cookie_token};account_id=${stuid || ''};`)
     }
     return alive(entry.ck || entry.ck_stoken || '')
   }
+
+  if (String(stoken).startsWith('v2_') && mid) return exchangeStoken(stuid, stoken, mid)
 
   const baseCk = mid
     ? `stuid=${stuid};stoken=${stoken};mid=${mid};`
@@ -86,15 +126,18 @@ export async function stokenToCookieDetailed(entry) {
     const cookieRes = await fetch(
       `https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?${authQuery}`,
       { method: 'GET', headers: { ...headers, DS: makeAppDs(authQuery) }, signal: AbortSignal.timeout(12000) },
-    ).then((r) => r.json())
+    ).then((r) => r.ok ? r.json() : null)
     const ltokenRes = await fetch(
       `https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken?${authQuery}`,
       { method: 'GET', headers: { ...headers, DS: makeAppDs(authQuery) }, signal: AbortSignal.timeout(12000) },
-    ).then((r) => r.json())
+    ).then((r) => r.ok ? r.json() : null)
 
-    const cookieToken = cookieRes?.data?.cookie_token
+    const rawToken = cookieRes?.data?.cookie_token
+    const cookieToken = cookieRes?.retcode === 0 && typeof rawToken === 'string' && rawToken.trim() &&
+      !['null', 'undefined'].includes(rawToken.trim()) &&
+      (cookieRes.data?.uid == null || String(cookieRes.data.uid) === String(stuid)) ? rawToken : ''
     const ltoken = ltokenRes?.data?.ltoken || entry.ltoken
-    stokenDead = isStokenDead(cookieRes) || isStokenDead(ltokenRes)
+    stokenDead = !String(stoken).startsWith('v2_') && (isStokenDead(cookieRes) && isStokenDead(ltokenRes))
     if (cookieToken && ltoken) {
       return alive(`ltoken=${ltoken};ltuid=${stuid};cookie_token=${cookieToken};account_id=${stuid};`)
     }
@@ -108,9 +151,11 @@ export async function stokenToCookieDetailed(entry) {
     }
   } catch (err) {
     if (typeof logger !== 'undefined') {
-      logger.debug?.(`[xhh-TL][auth] stoken→ck failed: ${err.message}`)
+      logger.debug?.(`[xhh-TL][auth] stoken→ck failed: ${err?.name || 'Error'}`)
     }
   }
+
+  if (forceRefresh) return { ck: '', stokenDead }
 
   if (entry.ltoken && entry.cookie_token) {
     return { ck: `ltoken=${entry.ltoken};ltuid=${stuid};cookie_token=${entry.cookie_token};account_id=${stuid};`, stokenDead }
@@ -124,7 +169,7 @@ export async function stokenToCookieDetailed(entry) {
 /** 米游社明确说 stoken 作废。 */
 function isStokenDead(res) {
   if (!res) return false
-  return Number(res.retcode) === -100 || /登录状态失效|重新登录/.test(res.message || '')
+  return Number(res.retcode) === -100 && /(登录|login|失效|过期)/i.test(res.message || '')
 }
 
 export async function stokenToCookie(entry) {
@@ -330,15 +375,19 @@ export async function getstoken(qq, uid, e = null) {
  * 按 UID 在 stoken yaml 中找条目（供 resolveAuth 等复用）
  * 优先精确 uid，其次任意含 stoken 的条目
  */
-export function findStokenEntry(qq, uid) {
+export function findStokenEntry(qq, uid, { strict = false, accountId = '' } = {}) {
+  const usable = entry => !!(entry?.stoken || entry?.ck_stoken ||
+    (strict && cookiePart(entry?.ck || entry?.cookie || '', 'stoken'))) &&
+    (!accountId || accountIdOf(entry) === String(accountId))
   for (const file of getStokenCandidateFiles(qq)) {
     if (!fs.existsSync(file)) continue
     const data = readYaml(file)
     if (!data || typeof data !== 'object') continue
     const exact = data[uid] || data[String(uid)]
-    if (exact && (exact.stoken || exact.ck_stoken)) return exact
+    if (usable(exact)) return exact
     for (const v of Object.values(data)) {
-      if (v?.stoken || v?.ck_stoken) return v
+      // 自愈只用当前 CK 的同账号或明确绑定此 UID 的凭据，不拿第一个其他账号来试。
+      if (usable(v) && (!strict || accountId || String(v.uid || '') === String(uid))) return v
     }
   }
   return null
@@ -349,12 +398,14 @@ export function findStokenEntry(qq, uid) {
  * 只认真带 cookie_token 的结果；换不出时 stokenDead 表示米游社是否已明确判死，
  * 供上层决定「清凭证让用户重新扫码」还是「只是临时失败、保留凭证」。
  */
-export async function refreshCkDetailed(qq, uid) {
+export async function refreshCkDetailed(qq, uid, { accountId = '' } = {}) {
   try {
-    const entry = findStokenEntry(qq, uid)
+    const entry = findStokenEntry(qq, uid, { strict: true, accountId })
     if (!entry) return { ck: '', stokenDead: false }
-    const { ck, stokenDead } = await stokenToCookieDetailed(entry)
-    const usable = ck && /cookie_token=/.test(ck)
+    const { ck, stokenDead } = await stokenToCookieDetailed(entry, { forceRefresh: true })
+    const actualAccount = cookiePart(ck, 'account_id') || cookiePart(ck, 'ltuid')
+    const usable = ck && /cookie_token=/.test(ck) && actualAccount === accountIdOf(entry) &&
+      (!accountId || actualAccount === String(accountId))
     return { ck: usable ? ck : '', stokenDead: usable ? false : !!stokenDead }
   } catch (_) {
     return { ck: '', stokenDead: false }
